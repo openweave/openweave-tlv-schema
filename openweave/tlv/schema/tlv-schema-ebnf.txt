@@ -1,0 +1,222 @@
+//
+//   Copyright (c) 2020 Google LLC.
+//   All rights reserved.
+//
+//   Licensed under the Apache License, Version 2.0 (the "License");
+//   you may not use this file except in compliance with the License.
+//   You may obtain a copy of the License at
+//
+//       http://www.apache.org/licenses/LICENSE-2.0
+//
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
+//
+
+//
+//   @file
+//     Syntax for Weave Schema, in Lark parser EBNF. 
+//
+
+%import common.LETTER
+%import common.DIGIT
+%import common.HEXDIGIT
+%import common.WS
+
+// Ignore all whitespace and non-documentation comments in the lexer.
+%ignore WS
+%ignore COMMENT
+
+
+// ---------- Top-level rule
+
+file                        : statements
+
+// ---------- Statement rules
+
+statements                  : statement*
+
+?statement                  : namespace_def
+                            | vendor_def
+                            | profile_def
+                            | message_def
+                            | status_code_def
+                            | using_stmt
+                            | type_def
+
+?statement_block            : "{" statements "}"
+
+// ---------- namespace definition
+
+namespace_def               : DOCS? "namespace"i SCOPED_NAME statement_block
+
+// ---------- using statement
+
+using_stmt                  : "using"i SCOPED_NAME
+
+// ---------- VENDOR definition
+
+vendor_def                  : DOCS? NAME "=>" "VENDOR"i qualifier_list?
+
+// ---------- PROFILE definition
+
+profile_def                 : DOCS? NAME "=>" "PROFILE"i qualifier_list? statement_block?
+
+// ---------- MESSAGE definition
+
+message_def                 : DOCS? NAME "=>" "MESSAGE"i qualifier_list? containing_clause?
+
+?containing_clause          : "CONTAINING"i type
+                            | "CONTAINING"i "NOTHING"i -> containing_nothing
+
+// ---------- STATUS CODE definition
+
+status_code_def             : DOCS? NAME "=>" "STATUS"i "CODE"i qualifier_list?
+
+// ---------- General type / type definition rules
+
+type_def                    : DOCS? NAME qualifier_list? "=>" type
+
+?type                       : structure_type
+                            | field_group_type
+                            | list_type
+                            | array_type
+                            | choice_type
+                            | integer_type
+                            | "FLOAT"i qualifier_list? -> float_type
+                            | "BOOLEAN"i qualifier_list? -> bool_type
+                            | "STRING"i qualifier_list? -> string_type
+                            | "BYTE"i "STRING"i qualifier_list? -> byte_string_type
+                            | "NULL"i qualifier_list? -> null_type
+                            | "ANY"i qualifier_list? -> any_type
+                            | referenced_type
+
+// ---------- STRUCTURE type
+
+structure_type              : "STRUCTURE"i qualifier_list? "{" structure_members? "}"
+
+structure_members           : DOCS? structure_member ( "," POSTFIX_DOCS? DOCS? structure_member )* ","? POSTFIX_DOCS?
+
+?structure_member           : NAME qualifier_list? ":" type -> structure_field_def 
+                            | "includes"i SCOPED_NAME -> structure_includes
+
+// ---------- FIELD GROUP pseudo-type
+
+field_group_type            : "FIELD"i "GROUP"i qualifier_list? "{" structure_members? "}"
+
+// ---------- ARRAY type
+
+?array_type                 : "ARRAY"i qualifier_list? "OF"i type -> uniform_array_type
+                            | "ARRAY"i qualifier_list? "{" linear_type_pattern? "}" -> pattern_array_type
+
+// ---------- LIST type
+      
+?list_type                  : "LIST"i qualifier_list? "OF"i type -> uniform_list_type
+                            | "LIST"i qualifier_list? "{" linear_type_pattern? "}" -> pattern_list_type
+
+// ---------- CHOICE OF type
+
+?choice_type                : "CHOICE"i qualifier_list? "OF"i "{" choice_alternates? "}" -> choice_type
+
+choice_alternates           : DOCS? choice_alternate ( "," POSTFIX_DOCS? DOCS? choice_alternate )* ","? POSTFIX_DOCS?
+
+?choice_alternate           : NAME qualifier_list? ":" type -> named_choice_alt 
+                            | type -> unnamed_choice_alt
+
+// ---------- [SIGNED/UNSIGNED] INTEGER type
+
+?integer_type               : "SIGNED"i? "INTEGER"i qualifier_list? enum_def? -> signed_integer_type
+                            | "UNSIGNED"i "INTEGER"i qualifier_list? enum_def? -> unsigned_integer_type
+
+?enum_def                   : "{" ( DOCS? enum_value ( "," POSTFIX_DOCS? DOCS? enum_value )* ","? POSTFIX_DOCS? )? "}"
+
+enum_value                  : NAME "=" INT
+
+// ---------- Referenced Type
+
+// NOTE: referenced_type is lower priority (0) than other types (default=1) so that type keywords
+// don't get interpreted as referenced type names.  This would need to be restructured to work
+// with the LALR parser, which does not support rule priorities.
+referenced_type.0           : SCOPED_NAME
+
+// ---------- Linear type pattern rules
+
+linear_type_pattern         : DOCS? ltp_elem ( "," POSTFIX_DOCS? DOCS? ltp_elem )* ","? POSTFIX_DOCS?
+
+?ltp_elem                   : NAME qualifier_list? ":" type quantifier? -> named_ltp_elem 
+                            | type quantifier? -> unnamed_ltp_elem
+
+// ---------- Qualifier rules
+
+qualifier_list              : "[" [ qualifier ( "," qualifier )* [ "," ] ] "]"
+
+?qualifier                  : "tag"i? tag_arg
+                            | "id"i id_arg
+                            | ("length"i | "len"i ) length_arg
+                            | "range"i range_arg
+                            | "extensible"i -> extensible
+                            | "tag-order"i -> tag_order
+                            | "schema-order"i -> schema_order
+                            | "any-order"i -> any_order
+                            | ( "optional"i | "opt"i ) -> optional
+                            | "private"i -> private
+                            | "invariant"i -> invariant
+                            | "nullable"i -> nullable
+
+tag_arg                     : INT -> context_tag
+                            | INT ":" INT -> profile_tag_int
+                            | SCOPED_NAME ":" INT -> profile_tag_name
+                            | STAR ":" INT -> profile_tag_name
+                            | "anon"i -> anon_tag
+
+id_arg                      : INT -> id
+                            | INT ":" INT -> id_int_scope
+                            | SCOPED_NAME ":" INT -> id_name_scope
+
+?range_arg                  : ( "8bits"i  | "8bit"i  ) -> range_8bits
+                            | ( "16bits"i | "16bit"i ) -> range_16bits
+                            | ( "32bits"i | "32bit"i ) -> range_32bits
+                            | ( "64bits"i | "64bit"i ) -> range_64bits
+                            | ( INT | DECIMAL ) ".." ( INT | DECIMAL ) -> range_from_to
+
+?length_arg                 : INT -> length_exact
+                            | INT ".." INT? -> length_from_to
+
+// ---------- Quantifier rules
+
+?quantifier                 : "?" -> quant_0_or_1
+                            | "*" -> quant_0_or_more
+                            | "+" -> quant_1_or_more
+                            | "{" INT "}" -> quant_exactly_n
+                            | "{" INT ".." INT? "}" -> quant_range
+
+// ---------- Token definitions
+
+UNQUOTED_NAME               : ( ("_"|LETTER) ("_"|"-"|LETTER|DIGIT)* )
+
+NAME                        : UNQUOTED_NAME
+                            | "'" UNQUOTED_NAME "'"
+
+UNQUOTED_SCOPED_NAME        : UNQUOTED_NAME ( "." UNQUOTED_NAME )*
+
+SCOPED_NAME                 : UNQUOTED_SCOPED_NAME
+                            | "'" UNQUOTED_SCOPED_NAME "'"
+
+INT                         : ["+"|"-"] ( "0x" HEXDIGIT+ | DIGIT+ ) 
+
+DECIMAL                     : ["+"|"-"] DIGIT* "." DIGIT+
+
+COMMENT                     : /\/\/[^\n]*/
+                            | /\/\*([^*]([^*]|([*][^\/]))*)?\*+\//
+
+STAR                        : "*"
+
+DOCS                        : DOCS_START /[^<]([^*]|(\*[^\/]))*\**/ DOCS_END
+
+POSTFIX_DOCS                : DOCS_START /<([^*]|(\*[^\/]))*\**/ DOCS_END
+
+DOCS_START                  : "/**"
+
+DOCS_END                    : "*/"

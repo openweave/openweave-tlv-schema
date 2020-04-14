@@ -1,0 +1,41 @@
+SetWirelessRegulatoryConfigArguments [anon] => STRUCTURE
+{
+    /** ISO 3166-1 country code, or “00” for world-wide.
+     */
+    regulatoryDomain [1, optional] : STRING [len 2],
+
+    /** Operating location relevant to wireless regulatory rules.
+     */
+    operatingLocation [2, optional] : UNSIGNED INTEGER [range 0..255]
+    {
+        reserved = 0,  /* may not be sent. */  
+        unknown = 1,
+        indoors = 2,
+        outdoors = 3
+    }
+}
+
+GetWirelessRegulatoryConfigResults [anon] => STRUCTURE
+{
+    /** ISO 3166-1 country code, or “00” for world-wide, or
+     * null if unknown.
+     */
+    regulatoryDomain [1] : STRING [len 2, nullable],
+
+    /** Operating location relevant to wireless regulatory rules,
+     * or null if unknown.
+     */
+    operatingLocation [2] : UNSIGNED INTEGER [range 0..255, nullable]
+    {
+        reserved = 0,  /* may not be sent. */  
+        unknown = 1,
+        indoors = 2,
+        outdoors = 3
+    },
+
+    /** List of support regulatory domains.
+     */
+    supportedRegulatoryDomains [3] : ARRAY OF STRING [len 2]
+}
+
+

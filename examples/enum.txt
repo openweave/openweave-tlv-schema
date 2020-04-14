@@ -1,0 +1,8 @@
+example-enum => UNSIGNED INTEGER [range 0..0xF]
+{
+  a = 0x01,
+  b = 0x02,
+  c = 0x03,
+  d = 4,
+}
+

@@ -1,0 +1,29 @@
+array => ARRAY [len 0..10] OF something
+
+something => STRUCTURE
+{
+  field : STRING
+}
+
+/**
+ * An array of besopke structures containing a single integer field.
+ */
+embedded-struct-array => ARRAY [len 1] OF STRUCTURE
+{
+  field : INTEGER
+}
+
+point => ARRAY
+{
+  /** x coordinate */
+  x                                      : UNSIGNED INTEGER [range 16bits],
+
+  /** y coordinate */
+  y                                      : UNSIGNED INTEGER [range 16bits],
+}
+
+named-vector => ARRAY
+{
+  name                                   : STRING,               /**< The vector name. */
+                                           UNSIGNED INTEGER *    /**< The vector values. */
+}

@@ -1,0 +1,19 @@
+
+shape => ARRAY
+{
+    name : STRING,
+    points : namespace.point +
+}
+
+point => ARRAY
+{
+    x : INTEGER,
+    Y : INTEGER
+}
+
+null-tuple => ARRAY
+{
+}
+
+// [ "a square", [ 0, 0 ], [ 10, 0 ], [ 0, 10 ], [ 10, 10 ] ]
+

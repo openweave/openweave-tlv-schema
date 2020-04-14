@@ -1,0 +1,7 @@
+example-choice => CHOICE OF
+{
+  alt-1     : BYTE STRING [len 10],
+  alt-2     : UNSIGNED INTEGER [range 64bits],
+              BOOLEAN,
+              NULL
+}
