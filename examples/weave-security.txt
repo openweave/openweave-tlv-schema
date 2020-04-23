@@ -2,7 +2,7 @@ namespace weave.profiles {
 
 /** Weave Security Profile
  */
-security => PROFILE [id Core:0x0004]
+security => PROFILE [id common:0x0004]
 {
     /** Weave Certificate
      *  Represents a compressed form of an X.509 certificate.
@@ -53,12 +53,12 @@ security => PROFILE [id Core:0x0004]
     {
         ecdsa-sig [1,opt]               : ecdsa-signature,
         rsa-sig [2,opt]                 : BYTE STRING,
-        signing-cert-ref [3,opt]        : weave-certificate-reference,
+        signing-cert-ref [3,opt]        : weave-cert-reference,
         related-certs [4,opt]           : weave-cert-list,
         sig-algo [5,opt]                : signature-algorithm,
     }
 
-    weave-certificate-reference [*:6] => STRUCTURE [tag-order]
+    weave-cert-reference [*:6] => STRUCTURE [tag-order]
     {
         subject [1,opt]                 : dn,
         pub-key-id [2,opt]              : BYTE STRING,
@@ -67,9 +67,9 @@ security => PROFILE [id Core:0x0004]
     case-certificate-info [*:7] => STRUCTURE [tag-order]
     {
         entity-cert [1,opt]             : weave-certificate,
-        entity-cert-ref [2,opt]         : weave-certificate-reference,
+        entity-cert-ref [2,opt]         : weave-cert-reference,
         related-certs [3,opt]           : LIST OF weave-certificate,
-        trust-anchors [4,opt]           : LIST [len 1..] OF weave-certificate-reference,
+        trust-anchors [4,opt]           : LIST [len 1..] OF weave-cert-reference,
     }
     
     case-signature [*:8] => ecdsa-signature
@@ -135,15 +135,14 @@ security => PROFILE [id Core:0x0004]
         includes common-extension-fields,
 
         is-ca [2,opt]                   : BOOLEAN,
-        path-len-constraint             : UNSIGNED INTEGER [range 8bits],        
+        path-len-constraint [3,opt]     : UNSIGNED INTEGER [range 8bits],        
     }
     
     extended-key-usage => STRUCTURE [tag-order]
     {
         includes common-extension-fields,
 
-        is-ca [2,opt]                   : BOOLEAN,
-        key-purpose-ids [3]             : ARRAY [len 1..] OF key-purpose-id,
+        key-purpose-ids [2]             : ARRAY [len 1..] OF key-purpose-id,
     }
     
     dn => LIST [len 1..] OF rdn

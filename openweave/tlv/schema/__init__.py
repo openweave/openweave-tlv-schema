@@ -22,4 +22,4 @@
 
 '''Provides Python APIs for working with Weave TLV Schemas.'''
 
-from .schemaobj import WeaveTLVSchema
+from .obj import WeaveTLVSchema

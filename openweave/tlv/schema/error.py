@@ -27,7 +27,16 @@ class WeaveTLVSchemaError(Exception):
         super(WeaveTLVSchemaError, self).__init__(msg)
         self.detail = detail
         self.sourceRef = sourceRef
-
-class WeaveTLVSchemaSyntaxError(WeaveTLVSchemaError):
-    def __init__(self, msg, detail=None, sourceRef=None):
-        super(WeaveTLVSchemaSyntaxError, self).__init__(msg, detail, sourceRef)
+        
+    def format(self, withTextMarker=True, withDetail=True):
+        res = 'ERROR: ' + str(self)
+        if withDetail and self.detail is not None:
+            res = res + "\nNOTE: " + self.detail
+        if self.sourceRef:
+            res = '%s: %s' % (self.sourceRef.filePosStr(), res)
+            if withTextMarker:
+                res += '\n\n' + self.sourceRef.lineSummaryStr()
+        return res
+    
+class AmbiguousTagError(Exception):
+    pass

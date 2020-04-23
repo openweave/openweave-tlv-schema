@@ -12,7 +12,8 @@ class TLVSchemaTestCase(unittest.TestCase):
     def loadValidate(schemaText):
         tlvSchema = WeaveTLVSchema()
         tlvSchema.loadSchemaFromString(schemaText)
-        return tlvSchema.validate()
+        errs = tlvSchema.validate()
+        return (tlvSchema, errs)
     
     def assertErrorCount(self, errs, count):
         if len(errs) != count:

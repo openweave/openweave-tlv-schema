@@ -26,7 +26,7 @@ from decimal import Decimal
 from lark import Tree, Token, v_args 
 from lark.visitors import Transformer
 
-from .ast import *
+from .node import *
 from .error import *
 
 class _SchemaTransformer(Transformer):
@@ -90,6 +90,8 @@ class _SchemaTransformer(Transformer):
         node.quals = self._popOptionalQualList(children)
         if len(children) == 1:
             node.statements = self._popTree(children, expectedName='statements').children
+        else:
+            node.statements = []
         assert len(children) == 0
         self._attachDocsToNodes(node.statements)
         self._setParent(node.quals, node)
@@ -462,13 +464,13 @@ class _SchemaTransformer(Transformer):
         try:
             return int(valStr, 0)
         except ValueError: 
-            raise WeaveTLVSchemaSyntaxError('Invalid %s value: %s' % (desc, valStr), sourceRef=sourceRef)
+            raise WeaveTLVSchemaError('Invalid %s value: %s' % (desc, valStr), sourceRef=sourceRef)
 
     def _parseDecimal(self, valStr, desc='decimal', sourceRef=None):
         try:
             val = Decimal(valStr)
         except ValueError:
-            raise WeaveTLVSchemaSyntaxError('Invalid %s value: %s' % (desc, valStr), sourceRef=sourceRef)
+            raise WeaveTLVSchemaError('Invalid %s value: %s' % (desc, valStr), sourceRef=sourceRef)
         # normalize to int if possible
         intVal = int(val)
         if intVal == val:

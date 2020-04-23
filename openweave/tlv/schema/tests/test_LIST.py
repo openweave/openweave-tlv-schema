@@ -1,9 +1,5 @@
 import unittest
 
-import sys
-import os
-import io
-
 from .testutils import TLVSchemaTestCase
 
 class Tests(TLVSchemaTestCase):
@@ -18,7 +14,7 @@ class Tests(TLVSchemaTestCase):
                          elem-a : STRING,
                      }
                      '''
-        errs = self.loadValidate(schemaText)
+        (tlvSchema, errs) = self.loadValidate(schemaText)
         self.assertErrorCount(errs, 1)
         self.assertError(errs, 'duplicate item in LIST type: elem-a')
 
@@ -31,7 +27,7 @@ class Tests(TLVSchemaTestCase):
                                   FIELD GROUP { },
                      }
                      '''
-        errs = self.loadValidate(schemaText)
+        (tlvSchema, errs) = self.loadValidate(schemaText)
         self.assertEqual(len(errs), 1)
         self.assertError(errs, 'FIELD GROUP type not allowed')
         schemaText = '''
@@ -43,7 +39,7 @@ class Tests(TLVSchemaTestCase):
                      }
                      test-field-group => FIELD GROUP { }
                      '''
-        errs = self.loadValidate(schemaText)
+        (tlvSchema, errs) = self.loadValidate(schemaText)
         self.assertEqual(len(errs), 1)
         self.assertError(errs, 'FIELD GROUP type not allowed')
 
