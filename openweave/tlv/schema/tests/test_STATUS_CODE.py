@@ -2,7 +2,7 @@ import unittest
 
 from .testutils import TLVSchemaTestCase
 
-class Tests(TLVSchemaTestCase):
+class Test_STATUS_CODE(TLVSchemaTestCase):
     
     def test_STATUS_CODE(self):
         schemaText = '''

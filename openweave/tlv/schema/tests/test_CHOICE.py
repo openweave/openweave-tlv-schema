@@ -2,7 +2,7 @@ import unittest
 
 from .testutils import TLVSchemaTestCase
 
-class Tests(TLVSchemaTestCase):
+class Test_CHOICE(TLVSchemaTestCase):
     
     def test_CHOICE_allLeafAlternatesWithNamesAndTags(self):
         schemaText = '''

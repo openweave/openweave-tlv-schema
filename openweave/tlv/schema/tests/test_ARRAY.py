@@ -2,7 +2,7 @@ import unittest
 
 from .testutils import TLVSchemaTestCase
 
-class Tests(TLVSchemaTestCase):
+class Test_ARRAY(TLVSchemaTestCase):
     
     def test_ARRAY_DuplicateElementNames(self):
         schemaText = '''

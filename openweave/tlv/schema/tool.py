@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3ests
 
 #
 #   Copyright (c) 2020 Google LLC.
@@ -46,10 +46,9 @@ class _ValidateCommand(object):
             'Usage:\n'
             '  {0} validate [options...] {{schema-files...}}\n'
             '\n'
-            '  -s\n'
-            '  -silent\n'
+            '  -s|--silent\n'
             '    Do not display results (exit code indicates the number of errors).\n'
-            ).format(scriptName, summary)
+        ).format(scriptName, summary)
 
     def run(self, args):
         argParser = _ArgumentParser(prog='{0} {1}'.format(scriptName, self.name),
@@ -93,7 +92,7 @@ class _DumpCommand(object):
             '\n'
             'Usage:\n'
             '  {0} dump {{schema-files...}}\n'
-            ).format(scriptName, summary)
+        ).format(scriptName, summary)
 
     def run(self, args):
         argParser = _ArgumentParser(prog='{0} {1}'.format(scriptName, self.name),
@@ -116,6 +115,38 @@ class _DumpCommand(object):
             
         return 0
 
+class _UnitTestCommand(object):
+    
+    name = 'unittest'
+    summary = 'Run unit tests on the TLV schema code'
+    help = ('{0} unittest : {1}\n'
+            '\n'
+            'Usage:\n'
+            '  {0} unittest [options...] [test-names...]\n'
+            '\n'
+            '  -v|--verbosity [int]\n'
+            '    Test progress verbosity (defaults to 2).\n'
+        ).format(scriptName, summary)
+
+    def run(self, args):
+        argParser = _ArgumentParser(prog='{0} {1}'.format(scriptName, self.name), add_help=False)
+        argParser.add_argument('-v', '--verbosity', type=int, default=2)
+        argParser.add_argument('testnames', nargs=argparse.REMAINDER, default=[])
+        args = argParser.parse_args(args)
+
+        import unittest
+        from . import tests
+        
+        if len(args.testnames) > 0:
+            selectedTests = unittest.defaultTestLoader.loadTestsFromNames(args.testnames, module=tests)
+        else:
+            selectedTests = unittest.defaultTestLoader.loadTestsFromModule(tests)
+
+        runner = unittest.TextTestRunner(verbosity=int(args.verbosity))
+        result = runner.run(selectedTests)
+        
+        return len(result.errors)
+
 class _HelpCommand(object):
     
     name = 'help'
@@ -123,7 +154,8 @@ class _HelpCommand(object):
 
     @property
     def help(self):
-        commandNames = ''.join(( '\n  {0} - {1}'.format(c.name, c.summary) for c in self.availCommands ))
+        maxWidth = max((len(c.name) for c in self.availCommands))
+        commandSummary = ''.join(( '\n  {0:<{width}} - {1}'.format(c.name, c.summary, width=maxWidth) for c in self.availCommands ))
         return ('{0} : A tool for working with Weave TLV Schemas\n'
                 '\n'
                 'Usage:\n'
@@ -132,7 +164,7 @@ class _HelpCommand(object):
                 'Available commands:{1}\n'
                 '\n'
                 'Run "{0} help <command>" for additional help.\n'
-            ).format(scriptName, commandNames)
+            ).format(scriptName, commandSummary)
     
     def __init__(self, availCommands):
         self.availCommands = availCommands
@@ -154,9 +186,11 @@ def main():
     try:
 
         # Construct a list of the available commands.
-        commands = []
-        commands.append(_ValidateCommand())
-        commands.append(_DumpCommand())
+        commands = [
+            _ValidateCommand(),
+            _DumpCommand(),
+            _UnitTestCommand()
+        ]
         commands.append(_HelpCommand(availCommands=commands))
 
         # Parse the command name argument, along with arguments for the command.

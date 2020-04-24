@@ -3,7 +3,7 @@ import unittest
 from openweave.tlv.schema.node import ArrayType, SignedIntegerType
 from .testutils import TLVSchemaTestCase
 
-class Tests(TLVSchemaTestCase):
+class Test_MESSAGE(TLVSchemaTestCase):
     
     def test_MESSAGE(self):
         schemaText = '''

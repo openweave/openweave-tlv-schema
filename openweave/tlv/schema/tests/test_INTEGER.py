@@ -4,7 +4,7 @@ from openweave.tlv.schema import WeaveTLVSchema
 from openweave.tlv.schema.node import TypeDef
 from .testutils import TLVSchemaTestCase
 
-class Tests(TLVSchemaTestCase):
+class Test_INTEGER(TLVSchemaTestCase):
 
     def test_INTEGER_EnumeratedValues(self):
         schemaText = '''

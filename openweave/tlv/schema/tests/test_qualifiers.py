@@ -2,7 +2,7 @@ import unittest
 
 from .testutils import TLVSchemaTestCase
 
-class Tests(TLVSchemaTestCase):
+class Test_Qualifiers(TLVSchemaTestCase):
     
     _quals = ['extensible',
               'optional',
@@ -23,7 +23,7 @@ class Tests(TLVSchemaTestCase):
 
     def _checkQualifierNotAllowedErrors(self, errs, allowedQuals, construct):
         errText = ", ".join((str(err) for err in errs))
-        for qual in Tests._qualNames:
+        for qual in self._qualNames:
             qualAllowed = qual in allowedQuals
             qualAccepted = not (('%s qualifier not allowed' % qual) in errText)
             if qualAccepted and not qualAllowed:
@@ -32,21 +32,21 @@ class Tests(TLVSchemaTestCase):
                 self.fail('%s qualifier unexpectedly *disallowed* on %s' % (qual, construct))
     
     def test_Qualifiers_AllowedQualifiers_TypeDef(self):
-        schemaText = 'test [ %s ] => INTEGER' % Tests._allQuals
+        schemaText = 'test [ %s ] => INTEGER' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('tag'),
             construct='Type definition')
 
     def test_Qualifiers_AllowedQualifiers_VENDOR(self):
-        schemaText = 'test => VENDOR [ %s ]' % Tests._allQuals
+        schemaText = 'test => VENDOR [ %s ]' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('id'),
             construct='VENDOR definition')
 
     def test_Qualifiers_AllowedQualifiers_PROFILE(self):
-        schemaText = 'test => PROFILE [ %s ]' % Tests._allQuals
+        schemaText = 'test => PROFILE [ %s ]' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('id'),
@@ -58,7 +58,7 @@ class Tests(TLVSchemaTestCase):
                       {
                           test => MESSAGE [ %s ]
                       }
-                      ''' % Tests._allQuals
+                      ''' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('id'),
@@ -70,112 +70,112 @@ class Tests(TLVSchemaTestCase):
                       {
                           test => STATUS CODE [ %s ]
                       }
-                      ''' % Tests._allQuals
+                      ''' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('id'),
             construct='STATUS CODE definition')
 
     def test_Qualifiers_AllowedQualifiers_STRUCTURE(self):
-        schemaText = 'test => STRUCTURE [ %s ] { }' % Tests._allQuals
+        schemaText = 'test => STRUCTURE [ %s ] { }' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('extensible', 'private', 'nullable', 'invariant', 'tag-order', 'schema-order', 'any-order'),
             construct='STRUCTURE type')
 
     def test_Qualifiers_AllowedQualifiers_FIELD_GROUP(self):
-        schemaText = 'test => FIELD GROUP [ %s ] { }' % Tests._allQuals
+        schemaText = 'test => FIELD GROUP [ %s ] { }' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=(),
             construct='FIELD GROUP type')
 
     def test_Qualifiers_AllowedQualifiers_ARRAY(self):
-        schemaText = 'test => ARRAY [ %s ] { }' % Tests._allQuals
+        schemaText = 'test => ARRAY [ %s ] { }' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('nullable', 'length'),
             construct='ARRAY type')
 
     def test_Qualifiers_AllowedQualifiers_ARRAY_OF(self):
-        schemaText = 'test => ARRAY [ %s ] OF ANY' % Tests._allQuals
+        schemaText = 'test => ARRAY [ %s ] OF ANY' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('nullable', 'length'),
             construct='ARRAY OF type')
 
     def test_Qualifiers_AllowedQualifiers_LIST(self):
-        schemaText = 'test => LIST [ %s ] { }' % Tests._allQuals
+        schemaText = 'test => LIST [ %s ] { }' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('nullable', 'length'),
             construct='LIST type')
 
     def test_Qualifiers_AllowedQualifiers_LIST_OF(self):
-        schemaText = 'test => LIST [ %s ] OF ANY' % Tests._allQuals
+        schemaText = 'test => LIST [ %s ] OF ANY' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('nullable', 'length'),
             construct='LIST OF type')
 
     def test_Qualifiers_AllowedQualifiers_CHOICE_OF(self):
-        schemaText = 'test => CHOICE [ %s ] OF { }' % Tests._allQuals
+        schemaText = 'test => CHOICE [ %s ] OF { }' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('nullable'),
             construct='CHOICE OF type')
 
     def test_Qualifiers_AllowedQualifiers_INTEGER(self):
-        schemaText = 'test => INTEGER [ %s ]' % Tests._allQuals
+        schemaText = 'test => INTEGER [ %s ]' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('nullable', 'range'),
             construct='INTEGER type')
 
     def test_Qualifiers_AllowedQualifiers_UNSIGNED_INTEGER(self):
-        schemaText = 'test => UNSIGNED INTEGER [ %s ]' % Tests._allQuals
+        schemaText = 'test => UNSIGNED INTEGER [ %s ]' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('nullable', 'range'),
             construct='UNSIGNED INTEGER type')
 
     def test_Qualifiers_AllowedQualifiers_FLOAT(self):
-        schemaText = 'test => FLOAT [ %s ]' % Tests._allQuals
+        schemaText = 'test => FLOAT [ %s ]' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('nullable', 'range'),
             construct='FLOAT type')
 
     def test_Qualifiers_AllowedQualifiers_BOOLEAN(self):
-        schemaText = 'test => BOOLEAN [ %s ]' % Tests._allQuals
+        schemaText = 'test => BOOLEAN [ %s ]' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('nullable'),
             construct='BOOLEAN type')
 
     def test_Qualifiers_AllowedQualifiers_STRING(self):
-        schemaText = 'test => STRING [ %s ]' % Tests._allQuals
+        schemaText = 'test => STRING [ %s ]' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('nullable', 'length'),
             construct='STRING type')
 
     def test_Qualifiers_AllowedQualifiers_BYTE_STRING(self):
-        schemaText = 'test => BYTE STRING [ %s ]' % Tests._allQuals
+        schemaText = 'test => BYTE STRING [ %s ]' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('nullable', 'length'),
             construct='BYTE STRING type')
 
     def test_Qualifiers_AllowedQualifiers_ANY(self):
-        schemaText = 'test => ANY [ %s ]' % Tests._allQuals
+        schemaText = 'test => ANY [ %s ]' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=(),
             construct='ANY type')
 
     def test_Qualifiers_AllowedQualifiers_NULL(self):
-        schemaText = 'test => NULL [ %s ]' % Tests._allQuals
+        schemaText = 'test => NULL [ %s ]' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=(),
@@ -187,7 +187,7 @@ class Tests(TLVSchemaTestCase):
                      {
                          field1 [ %s ] : INTEGER
                      }
-                     ''' % Tests._allQuals
+                     ''' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('tag', 'optional'),
@@ -198,7 +198,7 @@ class Tests(TLVSchemaTestCase):
                      {
                          field1 [ %s ] : INTEGER
                      }
-                     ''' % Tests._allQuals
+                     ''' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('tag', 'optional'),
@@ -210,7 +210,7 @@ class Tests(TLVSchemaTestCase):
                      {
                          elem1 [ %s ] : INTEGER
                      }
-                     ''' % Tests._allQuals
+                     ''' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=(),
@@ -221,7 +221,7 @@ class Tests(TLVSchemaTestCase):
                      {
                          elem1 [ %s ] : INTEGER
                      }
-                     ''' % Tests._allQuals
+                     ''' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('tag'),
@@ -233,7 +233,7 @@ class Tests(TLVSchemaTestCase):
                      {
                          alt1 [ %s ] : INTEGER
                      }
-                     ''' % Tests._allQuals
+                     ''' % self._allQuals
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self._checkQualifierNotAllowedErrors(errs, 
             allowedQuals=('tag'),
