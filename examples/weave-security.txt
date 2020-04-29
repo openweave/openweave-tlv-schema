@@ -4,6 +4,66 @@ namespace weave.profiles {
  */
 security => PROFILE [id common:0x0004]
 {
+    // ---- Message Types ----
+
+    pase-initiator-step1                => MESSAGE [ id 1 ]
+    pase-responder-step1                => MESSAGE [ id 2 ]
+    pase-responder-step2                => MESSAGE [ id 3 ]
+    pase-initiator-step2                => MESSAGE [ id 4 ]
+    pase-responder-key-confirm          => MESSAGE [ id 5 ]
+    pase-responder-reconfigure          => MESSAGE [ id 6 ]
+
+    case-begin-session-request          => MESSAGE [ id 10 ]
+    case-begin-session-response         => MESSAGE [ id 11 ]
+    case-initiator-key-confirm          => MESSAGE [ id 12 ]
+    case-reconfigure                    => MESSAGE [ id 13 ]
+
+    take-identify-token                 => MESSAGE [ id 20 ]
+    take-identify-token-response        => MESSAGE [ id 21 ]
+    take-token-reconfigure              => MESSAGE [ id 22 ]
+    take-authenticate-token             => MESSAGE [ id 23 ]
+    take-authenticate-token-response    => MESSAGE [ id 24 ]
+    take-re-authenticate-token          => MESSAGE [ id 25 ]
+    take-re-authenticate-token-response => MESSAGE [ id 26 ]
+
+    key-export-request                  => MESSAGE [ id 30 ]
+    key-export-response                 => MESSAGE [ id 31 ]
+    key-export-reconfigure              => MESSAGE [ id 32 ]
+
+    get-certificate-request             => MESSAGE [ id 40 ]
+    get-certificate-response            => MESSAGE [ id 41 ]
+
+    end-session                         => MESSAGE [ id 100 ]
+    key-error                           => MESSAGE [ id 101 ]
+    msg-counter-sync-response           => MESSAGE [ id 102 ]
+
+    // ---- Status Codes ----
+    
+    session-aborted                     => STATUS CODE [ id 1 ] 
+    pase-supports-only-config1          => STATUS CODE [ id 2 ] 
+    unsupported-encryption-type         => STATUS CODE [ id 3 ] 
+    invalid-key-id                      => STATUS CODE [ id 4 ] 
+    duplicate-key-id                    => STATUS CODE [ id 5 ] 
+    key-confirmation-failed             => STATUS CODE [ id 6 ] 
+    internal-error                      => STATUS CODE [ id 7 ] 
+    authentication-failed               => STATUS CODE [ id 8 ] 
+    unsupported-case-configuration      => STATUS CODE [ id 9 ] 
+    unsupported-certificate             => STATUS CODE [ id 10 ]
+    no-common-pase-configurations       => STATUS CODE [ id 11 ]
+    key-not-found                       => STATUS CODE [ id 12 ]
+    wrong-encryption-type               => STATUS CODE [ id 13 ]
+    unknown-key-type                    => STATUS CODE [ id 14 ]
+    invalid-use-of-session-key          => STATUS CODE [ id 15 ]
+    internal-key-error                  => STATUS CODE [ id 16 ]
+    no-common-key-export-configuration  => STATUS CODE [ id 17 ]
+    unauthorized-key-export-request     => STATUS CODE [ id 18 ]
+    no-new-operational-cert-required    => STATUS CODE [ id 19 ]
+    operational-node-id-in-use          => STATUS CODE [ id 20 ]
+    invalid-operational-node-id         => STATUS CODE [ id 21 ]
+    invalid-operational-certificate     => STATUS CODE [ id 22 ]
+    
+    // ---- Data Types ----
+    
     /** Weave Certificate
      *  Represents a compressed form of an X.509 certificate.
      */
