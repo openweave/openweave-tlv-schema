@@ -27,6 +27,7 @@ import sys
 import os
 import argparse
 from .obj import WeaveTLVSchema
+from .error import WeaveTLVSchemaError
 
 scriptName = os.path.basename(sys.argv[0])
 
@@ -62,12 +63,17 @@ class _ValidateCommand(object):
         
         schema = WeaveTLVSchema()
         
+        errs = []
+        
         for schemaFileName in args.files:
             if not os.path.exists(schemaFileName):
                 raise _UsageError('{0} {1}: Schema file not found: {0}\n'.format(scriptName, self.name, schemaFileName))
-            schema.loadSchemaFromFile(schemaFileName)
+            try:
+                schema.loadSchemaFromFile(schemaFileName)
+            except WeaveTLVSchemaError as err:
+                errs.append(err)
 
-        errs = schema.validate()
+        errs += schema.validate()
         
         if not args.silent:
             if len(errs) == 0:

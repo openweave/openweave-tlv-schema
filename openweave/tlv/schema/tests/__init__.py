@@ -7,5 +7,6 @@ from .test_PROFILE import Test_PROFILE
 from .test_qualifiers import Test_Qualifiers
 from .test_STATUS_CODE import Test_STATUS_CODE
 from .test_STRUCTURE import Test_STRUCTURE
+from .test_syntax import Test_Syntax
 from .test_tags import Test_Tags
 from .test_VENDOR import Test_VENDOR

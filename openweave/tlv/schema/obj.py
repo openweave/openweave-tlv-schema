@@ -25,6 +25,7 @@ import os
 import io
 
 from lark import Lark
+from lark.exceptions import LarkError, UnexpectedCharacters, UnexpectedToken, VisitError
 from collections import defaultdict
 
 from .node import *
@@ -45,7 +46,8 @@ common => VENDOR [ id 0 ]
             scriptDir = os.path.dirname(os.path.realpath(__file__))
             with open(os.path.join(scriptDir, WeaveTLVSchema.EBNFFileName), "r") as s:
                 schemaSyntax = s.read()
-                WeaveTLVSchema._schemaParser = Lark(schemaSyntax, start='file', propagate_positions=True)
+                WeaveTLVSchema._schemaParser = Lark(schemaSyntax, parser='lalr', lexer='standard', 
+                                                    start='file', propagate_positions=True)
         self._schemaFiles = []
         self._vendors = defaultdict(list)
         self._namespaces = defaultdict(list)
@@ -60,10 +62,18 @@ common => VENDOR [ id 0 ]
             else:
                 fileName = '(stream)'
         schemaText = stream.read()
-        schemaTree = WeaveTLVSchema._schemaParser.parse(schemaText)
-        schemaFile = _SchemaTransformer(fileName=fileName, schemaText=schemaText).transform(schemaTree)
+        
+        schemaFile = SchemaFile(fileName, schemaText)
+        
+        try:
+            schemaTree = WeaveTLVSchema._schemaParser.parse(schemaText)
+            _SchemaTransformer(schemaFile).transform(schemaTree)
+        except LarkError as parseErr:
+            raise self._translateParseError(parseErr, schemaFile) from None
+        
         self._schemaFiles.append(schemaFile)
         self._indexNodes(schemaFile)
+
         return schemaFile
     
     def loadSchemaFromFile(self, fileName):
@@ -79,11 +89,11 @@ common => VENDOR [ id 0 ]
             self.loadSchemaFromString(self._defaultSchema, fileName='(default)')
             self._defaultSchemaLoaded = True
 
-    def validate(self):
+    def validate(self, errs=None):
         '''Check the loaded schema files for syntactical and structural errors and
            return a list of exceptions describing any errors found.'''
+        errs = errs if errs is not None else []
         self.loadDefaultSchema()
-        errs = []
         self._resolveTypeReferences(errs)
         self._resolveVendorReferences(errs)
         self._resolveProfileReferences(errs)
@@ -264,7 +274,76 @@ common => VENDOR [ id 0 ]
                                         detail='a PROFILE definition with the specified name could not be found',
                                         sourceRef=tagNode.sourceRef)
                     
-            
 
+
+    def _translateParseError(self, parseErr, schemaFile):
+        # If a WeaveTLVSchemaError was raised during the tree transformation process
+        # raise that error directly.
+        if isinstance(parseErr, VisitError) and isinstance(parseErr.orig_exc, WeaveTLVSchemaError):
+            return parseErr.orig_exc
+        
+        if isinstance(parseErr, UnexpectedCharacters):
+            sourceRef = SourceRef(schemaFile=schemaFile, 
+                                  startLine=parseErr.line, 
+                                  startCol=parseErr.column,
+                                  startPos=parseErr.pos_in_stream)
+
+            # Report an unterminated quote
+            r = re.compile('"[^"]*$', re.MULTILINE)
+            m = r.match(schemaFile.schemaText, pos=parseErr.pos_in_stream)
+            if m:
+                return WeaveTLVSchemaError(msg='unterminated string', sourceRef=sourceRef)
+
+            # Report an invalid name
+            r = re.compile(''' ([A-Za-z0-9_-]+) | ("[^']*") ''', re.MULTILINE|re.VERBOSE)
+            m = r.match(schemaFile.schemaText, pos=parseErr.pos_in_stream)
+            if m:
+                l = len(m[0])
+                sourceRef.endCol += l
+                sourceRef.endPos += l
+                if m.group() == '""':
+                    return WeaveTLVSchemaError(msg='unexpected input: ""', sourceRef=sourceRef)
+                elif re.match(''' ([0-9-][A-Za-z0-9_-]*) | ("[0-9-][A-Za-z0-9_-]*") ''', m.group(), re.VERBOSE):
+                    detail = 'names must begin with a letter or an underbar'
+                else:
+                    detail = 'names must contain alphanumeric characters, dashes and underbars only'
+                return WeaveTLVSchemaError(msg='invalid name: %s' % m.group(), detail=detail, sourceRef=sourceRef)
+
+            # Report an unexpected input character
+            unexpected = schemaFile.schemaText[parseErr.pos_in_stream]
+            return WeaveTLVSchemaError(msg='unexpected input: %s' % unexpected, sourceRef=sourceRef)
+
+        if isinstance(parseErr, UnexpectedToken):
+            token = parseErr.token
+            tokenLen = len(token)
+            sourceRef = SourceRef(schemaFile=schemaFile, 
+                                  startLine=parseErr.line, 
+                                  startCol=parseErr.column,
+                                  startPos=parseErr.pos_in_stream,
+                                  endCol=parseErr.column + tokenLen,
+                                  endPos=parseErr.pos_in_stream + tokenLen)
+            detail = None
+            if token.type == 'INT' or token.type == 'DECIMAL':
+                msg = 'unexpected numeric value: %s' % token
+            elif token.type == 'UNQUOTED_NAME' or token.type == 'QUOTED_NAME':
+                msg = 'unexpected name: %s' % token
+            elif token.type == '$END':
+                msg = 'unexpected end of input'
+            elif re.search('[A-Za-z]', token):
+                msg = 'unexpected keyword: %s' % token
+                if re.match('[A-Za-z_][A-Za-z0-9_-]+$', token):
+                    detail = 'surround with single quotes to use as a name'
+            else:
+                msg = 'unexpected input: %s' % token
+                
+            if detail is None:
+                if parseErr.expected and any(e == 'RSQB' for e in parseErr.expected):
+                    detail = 'possibly missing ]'
+                elif parseErr.expected and any(e == 'RBRACE' for e in parseErr.expected):
+                    detail = 'possibly missing }'
+                
+            return WeaveTLVSchemaError(msg=msg, detail=detail, sourceRef=sourceRef)
+        
+        return parseErr
 
 

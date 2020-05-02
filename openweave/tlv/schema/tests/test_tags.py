@@ -26,22 +26,22 @@ class Test_Tags(TLVSchemaTestCase):
         self.assertErrorCount(errs, 1)
         self.assertError(errs, 'invalid profile reference')
 
-        schemaText = 'test => STRUCTURE { field [ undefined-profile:1 ] : INTEGER }'
+        schemaText = 'test => STRUCTURE { field1 [ undefined-profile:1 ] : INTEGER }'
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self.assertErrorCount(errs, 1)
         self.assertError(errs, 'invalid profile reference')
 
-        schemaText = 'test => LIST { field [ undefined-profile:1 ] : INTEGER }'
+        schemaText = 'test => LIST { field1 [ undefined-profile:1 ] : INTEGER }'
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self.assertErrorCount(errs, 1)
         self.assertError(errs, 'invalid profile reference')
 
-        schemaText = 'test => CHOICE OF { field [ undefined-profile:1 ] : INTEGER }'
+        schemaText = 'test => CHOICE OF { field1 [ undefined-profile:1 ] : INTEGER }'
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self.assertErrorCount(errs, 1)
         self.assertError(errs, 'invalid profile reference')
 
-        schemaText = 'test => FIELD GROUP { field [ undefined-profile:1 ] : INTEGER }'
+        schemaText = 'test => FIELD GROUP { field1 [ undefined-profile:1 ] : INTEGER }'
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self.assertErrorCount(errs, 1)
         self.assertError(errs, 'invalid profile reference')

@@ -5,14 +5,19 @@ import os
 import io
 
 from openweave.tlv.schema import WeaveTLVSchema
+from openweave.tlv.schema.error import WeaveTLVSchemaError
 
 class TLVSchemaTestCase(unittest.TestCase):
 
     @staticmethod
     def loadValidate(schemaText):
         tlvSchema = WeaveTLVSchema()
-        tlvSchema.loadSchemaFromString(schemaText)
-        errs = tlvSchema.validate()
+        errs = []
+        try:
+            tlvSchema.loadSchemaFromString(schemaText)
+        except WeaveTLVSchemaError as err:
+            errs.append(err)
+        errs += tlvSchema.validate()
         return (tlvSchema, errs)
     
     def assertErrorCount(self, errs, count):

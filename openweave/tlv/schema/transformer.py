@@ -30,9 +30,9 @@ from .node import *
 from .error import *
 
 class _SchemaTransformer(Transformer):
-    def __init__(self, fileName, schemaText):
+    def __init__(self, schemaFile):
         Transformer.__init__(self)
-        self.schemaFile = SchemaFile(fileName, schemaText)
+        self.schemaFile = schemaFile
 
     # ----- general rule handlers
     
@@ -48,7 +48,7 @@ class _SchemaTransformer(Transformer):
     def namespace_def(self, children, meta):
         node = Namespace(SourceRef.fromMeta(self.schemaFile, meta))
         (node.docs, node.docsSourceRef) = self._popOptionalDocs(children)
-        (node.name, node.nameSourceRef) = self._popName(children, type='SCOPED_NAME')
+        (node.name, node.nameSourceRef) = self._popName(children, allowScopedName=True)
         node.statements = self._popTree(children, expectedName='statements').children
         assert len(children) == 0
         self._attachDocsToNodes(node.statements)
@@ -68,7 +68,7 @@ class _SchemaTransformer(Transformer):
     @v_args(meta=True)
     def using_stmt(self, children, meta):
         node = Using(SourceRef.fromMeta(self.schemaFile, meta))
-        (node.targetName, node.targetNameSourceRef) = self._popName(children, type='SCOPED_NAME')
+        (node.targetName, node.targetNameSourceRef) = self._popName(children, allowScopedName=True)
         assert len(children) == 0
         return node
 
@@ -232,7 +232,7 @@ class _SchemaTransformer(Transformer):
             profile = '*'
             children.pop(0)
         else: 
-            (profile, unused) = self._popName(children, type='SCOPED_NAME')
+            (profile, unused) = self._popName(children, allowScopedName=True)
         (tagNum, unused) = self._popInt(children, desc='profile tag')
         assert len(children) == 0
         return Tag(SourceRef.fromMeta(self.schemaFile, meta), tagNum=tagNum, profile=profile)
@@ -256,7 +256,7 @@ class _SchemaTransformer(Transformer):
 
     @v_args(meta=True)
     def id_name_scope(self, children, meta):
-        (vendor, unused) = self._popName(children, type='SCOPED_NAME')
+        (vendor, unused) = self._popName(children, allowScopedName=True)
         (idNum, unused) = self._popInt(children, desc='id')
         assert len(children) == 0
         return Id(SourceRef.fromMeta(self.schemaFile, meta), idNum=idNum, vendor=vendor)
@@ -329,7 +329,7 @@ class _SchemaTransformer(Transformer):
     @v_args(meta=True)
     def structure_includes(self, children, meta):
         node = StructureIncludes(SourceRef.fromMeta(self.schemaFile, meta))
-        (node.targetName, unused) = self._popName(children, type='SCOPED_NAME')
+        (node.targetName, unused) = self._popName(children, allowScopedName=True)
         return node
 
     @v_args(meta=True)
@@ -454,7 +454,7 @@ class _SchemaTransformer(Transformer):
     @v_args(meta=True)
     def referenced_type(self, children, meta):
         node = ReferencedType(SourceRef.fromMeta(self.schemaFile, meta))
-        (node.targetName, unused) = self._popName(children, type='SCOPED_NAME')
+        (node.targetName, unused) = self._popName(children, allowScopedName=True)
         assert len(children) == 0
         return node
 
@@ -477,14 +477,24 @@ class _SchemaTransformer(Transformer):
             val = intVal
         return val
 
-    def _popName(self, children, type='NAME'):
-        assert len(children) > 0 and isinstance(children[0], Token) and (type is None or children[0].type == type)
-        nameToken = children.pop(0)
-        nameSourceRef = SourceRef.fromToken(self.schemaFile, nameToken)
-        name = nameToken.value
-        if name[0] == "'":
-            name = name[1:-1]
-        return (name, nameSourceRef)
+    def _popName(self, children, allowScopedName=False):
+        nameTree = self._popTree(children, 'name')
+        nameSourceRef = SourceRef.fromMeta(self.schemaFile, nameTree.meta)
+        nameComponents = []
+        for nameToken in nameTree.children:
+            assert isinstance(nameToken, Token)
+            if nameToken.type == 'UNQUOTED_NAME':
+                nameComponents.append(nameToken.value)
+            else:
+                assert nameToken.type == 'QUOTED_NAME'
+                assert nameToken.value[0] == '"' and nameToken.value[-1] == '"'
+                nameComponents.append(nameToken.value[1:-1])
+        nameVal = '.'.join(nameComponents)
+        if len(nameComponents) > 1 and not allowScopedName:
+            raise WeaveTLVSchemaError(msg='Invalid name: %s' % (nameVal),
+                                      detail='Scoped name not allowed in this context',
+                                      sourceRef=nameSourceRef)
+        return (nameVal, nameSourceRef)
 
     def _popOptionalQualList(self, children, pos=0):
         if len(children) > pos and isinstance(children[pos], Tree) and children[pos].data == 'qualifier_list':

@@ -1460,14 +1460,14 @@ class LinearTypePatternElement(HasName, HasQualifiers, HasDocumentation, SchemaN
 class SourceRef(object):
     '''Identifies a source of schema (e.g. a file), and start / end text positions within that source.'''
 
-    def __init__(self, schemaFile, startLine, startCol, startPos, endLine, endCol, endPos):
+    def __init__(self, schemaFile, startLine, startCol, startPos, endLine=None, endCol=None, endPos=None):
         self.schemaFile = schemaFile
         self.startLine = startLine
         self.startCol = startCol
         self.startPos = startPos
-        self.endLine = endLine
-        self.endCol = endCol
-        self.endPos = endPos
+        self.endLine = endLine if endLine is not None else startLine
+        self.endCol = endCol if endCol is not None else startCol
+        self.endPos = endPos if endPos is not None else startPos
 
     def setstart(self, otherSourceRef):
         self.startLine = otherSourceRef.startLine
