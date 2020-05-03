@@ -401,7 +401,7 @@ class StructuredTypeNode(HasQualifiers, TypeNode):
                 else:
                     sourceRef = fieldIncludeStmt.sourceRef
                 _addSchemaError(errs, msg='duplicate field in %s: %s' % (self.schemaConstruct, field.name),
-                                detail='fields within a %s type must have unique names' % self.schemaConstruct,
+                                detail='fields within a %s must have unique names' % self.schemaConstruct,
                                 sourceRef=sourceRef)
 
     def _checkMissingOrInvalidTags(self, errs):
@@ -415,15 +415,15 @@ class StructuredTypeNode(HasQualifiers, TypeNode):
                 if len(possibleTags) == 0 or None in possibleTags:
                     if isinstance(member.targetType, ChoiceType):
                         _addSchemaError(errs, msg='missing tag',
-                                        detail='all CHOICE OF alternates within a %s type field must declare an associated tag' % self.schemaConstruct,
+                                        detail='all CHOICE OF alternates within a %s field must declare an associated tag' % self.schemaConstruct,
                                         sourceRef=member.sourceRef)
                     else:
                         _addSchemaError(errs, msg='missing tag',
-                                        detail='fields within a %s type must declare an associated tag' % self.schemaConstruct,
+                                        detail='fields within a %s must declare an associated tag' % self.schemaConstruct,
                                         sourceRef=member.sourceRef)
                 if any((tag.isAnonTag for tag in possibleTags)):
                     _addSchemaError(errs, msg='invalid use of anonymous tag',
-                                    detail='fields within a %s type cannot declare an anonymous tag' % self.schemaConstruct,
+                                    detail='fields within a %s cannot declare an anonymous tag' % self.schemaConstruct,
                                     sourceRef=member.sourceRef)
 
     def _checkDuplicateTags(self, errs):

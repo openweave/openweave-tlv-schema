@@ -1,0 +1,5 @@
+temperature-sample => STRUCTURE
+{
+    timestamp [1]   : UNSIGNED INTEGER [range 32bits],
+    temperature [2] : FLOAT,
+}

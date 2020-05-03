@@ -1,0 +1,4 @@
+my-struct => STRUCTURE
+{
+    field-1 [0] : INTEGER,
+    field-2 [1] : INTEGER,

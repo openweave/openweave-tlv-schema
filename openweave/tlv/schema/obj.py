@@ -56,6 +56,10 @@ common => VENDOR [ id 0 ]
         self._defaultSchemaLoaded = False
 
     def loadSchemaFromStream(self, stream, fileName=None):
+        '''Load a TLV schema from a given input stream.
+           If successful, a SchemaFile object is returned.
+           If fileName is given, it is used to set the fileName attribute of the returned
+           SchemaFile. This can be useful in error reporting.'''
         if fileName is None:
             if hasattr(stream, 'name'):
                 fileName = stream.name
@@ -77,14 +81,24 @@ common => VENDOR [ id 0 ]
         return schemaFile
     
     def loadSchemaFromFile(self, fileName):
+        '''Load a TLV schema from a named text file.
+           If successful, a SchemaFile object is returned.'''
         with open(fileName, "r") as f:
             return self.loadSchemaFromStream(f, fileName)
 
     def loadSchemaFromString(self, s, fileName='(string)'):
+        '''Load a TLV schema from a named text file.
+           If successful, a SchemaFile object is returned.
+           If fileName is given, it is used to set the fileName attribute of the returned
+           SchemaFile. This can be useful in error reporting.'''
         with io.StringIO(s) as f:
             return self.loadSchemaFromStream(f, fileName)
 
     def loadDefaultSchema(self):
+        '''Load the build-in default schema.
+           The default schema defines schema constructs that are presumed to be present
+           in all schemas.
+           Note that calling validate() automatically loads the default schema.'''
         if not self._defaultSchemaLoaded:        
             self.loadSchemaFromString(self._defaultSchema, fileName='(default)')
             self._defaultSchemaLoaded = True
@@ -105,30 +119,38 @@ common => VENDOR [ id 0 ]
         return errs
     
     def allNodes(self, classinfo=object):
-        '''Iterate for all nodes and their descendants, if they are instances of classinfo'''
+        '''Iterate for all nodes and their descendants, if they are instances of classinfo.'''
         for schemaFile in self._schemaFiles:
             for node in schemaFile.allNodes():
                 if isinstance(node, classinfo):
                     yield node
 
     def allFiles(self):
-        '''Iterate for schema files'''
+        '''Iterate for all schema files.'''
         for schemaFile in self._schemaFiles:
             yield schemaFile
 
     def getTypeDef(self, typeName):
+        '''Lookup a TypeDef node by name.
+           Returns None if not found.'''
         typeDefList = self._typeDefs.get(typeName, None)
         if typeDefList is not None:
             return typeDefList[0]
         return None
 
     def getProfile(self, profileName):
+        '''Lookup a Profile node by name.
+           Returns None if not found. If multiple Profile nodes exist with the same
+           name, the first such node is returned.'''
         profileList = self._profiles.get(profileName, None)
         if profileList is not None:
             return profileList[0]
         return None
 
     def getVendor(self, vendorName):
+        '''Lookup a Vendor node by name.
+           Returns None if not found. If multiple Profile nodes exist with the same
+           name, the first such node is returned.'''
         vendorList = self._vendors.get(vendorName, None)
         if vendorList is not None:
             return vendorList[0]
