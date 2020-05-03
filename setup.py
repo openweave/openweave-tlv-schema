@@ -27,14 +27,19 @@ from datetime import datetime
 import getpass
 from setuptools import setup
 
+packageName = 'openweave-tlv-schema'
+packageVer = '1.0'
 
-# Construct the package version string.  If building under Travis use the Travis
-# build number as the package version.  Otherwise use a dummy version of '0.0'.
-# (See PEP-440 for the syntax rules for python package versions).
+# Allow package name to be overridden in the environment.
+packageName = os.environ.get('PACKAGE_NAME', packageName)
+
+# Allow package version to be overridden in the environment.
+packageVer = os.environ.get('PACKAGE_VERSION', packageVer)
+
+# If building under Travis, assume that this is a developer version, and use
+# the Travis build number as the development version number.
 if 'TRAVIS_BUILD_NUMBER' in os.environ:
-    packageVer = os.environ['TRAVIS_BUILD_NUMBER']
-else:
-    packageVer = os.environ.get('OPENWEAVE_PYTHON_VERSION', '0.0')
+    packageVer = '%s.dev%s' % (packageVer, os.environ['TRAVIS_BUILD_NUMBER'])
 
 # Generate a description string with information on how/when the package
 # was built. 
@@ -47,12 +52,12 @@ if 'TRAVIS_BUILD_NUMBER' in os.environ:
                             os.environ['TRAVIS_BRANCH'],
                             os.environ['TRAVIS_COMMIT'])
 else:
-    buildDescription = 'Build by %s on %s\n' % (
+    buildDescription = 'Built by %s on %s\n' % (
                             getpass.getuser(),
                             datetime.now().strftime('%Y/%m/%d %H:%M:%S'))
 
 setup(
-    name='openweave-tlv-schema',
+    name=packageName,
     version=packageVer,
     description='Python-based libraries and tools for working with Weave TLV schemas.',
     long_description=buildDescription,
@@ -62,11 +67,10 @@ setup(
     classifiers=[
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
     ],
-    python_requires='>=2.7',
+    python_requires='>=3.6',
     packages=[
         'openweave.tlv.schema',
         'openweave.tlv.schema.tests',

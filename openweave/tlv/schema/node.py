@@ -300,7 +300,7 @@ class SequencedTypeNode(HasQualifiers, TypeNode):
                 yield elem
     
     def getElement(self, elemName):
-        return next(filter(lambda elem: elem.name == elemName, self.allTypePatternElements()), None)
+        return next((e for e in self.allTypePatternElements() if e.name == elemName), None)
         
     def validate(self, errs):
         super(SequencedTypeNode, self).validate(errs)
@@ -362,7 +362,7 @@ class StructuredTypeNode(HasQualifiers, TypeNode):
                 yield (m, None)
 
     def getField(self, fieldName):
-        return next(filter(lambda field: field.name == fieldName, self.allFields()), None)
+        return next((f for f in self.allFields() if f.name == fieldName), None)
         
     def validate(self, errs):
         super(StructuredTypeNode, self).validate(errs)
@@ -767,7 +767,7 @@ class Profile(HasQualifiers, Namespace):
     
     def _checkNestedProfiles(self, errs):
         '''Verify no nesting of PROFILES'''
-        parentProfile = next(filter(lambda e:isinstance(e, Profile), self.allParentNodes()), None)
+        parentProfile = next((n for n in self.allParentNodes() if isinstance(n, Profile)), None)
         if parentProfile is not None:
             _addSchemaError(errs, msg='nested PROFILE definition',
                             detail='PROFILE definitions may not appear within other PROFILE definitions',

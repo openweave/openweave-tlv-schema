@@ -17,7 +17,7 @@ class Test_Qualifiers(TLVSchemaTestCase):
               'tag 42',
               'id 42']
     
-    _qualNames = [qual.split(maxsplit=1)[0] for qual in _quals]
+    _qualNames = [ qual.split(' ', 1)[0] for qual in _quals ]
 
     _allQuals = ', '.join(_quals)
 
