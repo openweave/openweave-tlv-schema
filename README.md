@@ -20,16 +20,21 @@ can be used when building Weave-based applications.
 
 The openweave-tlv-schema package can be built using the supplied setup.py script:
 
-    ./setup.py sdist
+```console
+$ ./setup.py sdist
+```
     
 Install the package using pip3:
 
-    pip3 install --user dist/openweave-tlv-schema-*.tar.gz
+```console
+$ pip3 install --user dist/openweave-tlv-schema-*.tar.gz
+```
     
 Alternatively, one can use the supplied Makefile to build and install:
 
-    make install
-    
+```console
+$ make install
+```
 
 ## weave-tlv-schema Tool
 
@@ -37,19 +42,21 @@ The openweave-tlv-schema package includes a command-line tool called `weave-tlv-
 `weave-tlv-schema` tool provides various commands for working with TLV schemas.  The `help`
 command can be used to see a list of the available commands:
 
-    $ ./weave-tlv-schema help
-    weave-tlv-schema : A tool for working with Weave TLV Schemas
-    
-    Usage:
-      weave-tlv-schema {command} [options] ...
-    
-    Available commands:
-      validate - Validate the syntax and consistency of a TLV schema
-      dump     - Dump the syntax tree for a TLV schema
-      unittest - Run unit tests on the TLV schema code
-      help     - Display usage information
-    
-    Run "weave-tlv-schema help <command>" for additional help.
+```console
+$ ./weave-tlv-schema help
+weave-tlv-schema : A tool for working with Weave TLV Schemas
+
+Usage:
+  weave-tlv-schema {command} [options] ...
+
+Available commands:
+  validate - Validate the syntax and consistency of a TLV schema
+  dump     - Dump the syntax tree for a TLV schema
+  unittest - Run unit tests on the TLV schema code
+  help     - Display usage information
+
+Run "weave-tlv-schema help <command>" for additional help.
+```
 
 
 ### Validating Schemas
@@ -57,67 +64,74 @@ command can be used to see a list of the available commands:
 The `weave-tlv-schema validate` command can be used to check the correctness of a Weave TLV
 schema:
 
-    $ ./weave-tlv-schema validate examples/device-descriptor.txt 
-    Validation completed successfully
+```console
+$ ./weave-tlv-schema validate examples/device-descriptor.txt 
+Validation completed successfully
+```
 
 If an error is found, the tool will produce detailed information about the nature and
 location of the error:
 
-    $ ./weave-tlv-schema validate ./examples/syntax-error.txt ./examples/schema-error.txt 
-    ./examples/syntax-error.txt:4:26: ERROR: unexpected end of input
-    NOTE: possibly missing }
-    
-        field-2 [1] : INTEGER,
-                             ^
-    
-    ./examples/schema-error.txt:5:5: ERROR: duplicate field in STRUCTURE type: field-1
-    NOTE: fields within a STRUCTURE type must have unique names
-    
-        field-1 [2] : STRING,   // bad field name
-        ^
+```console
+$ ./weave-tlv-schema validate ./examples/syntax-error.txt ./examples/schema-error.txt 
+./examples/syntax-error.txt:4:26: ERROR: unexpected end of input
+NOTE: possibly missing }
+
+    field-2 [1] : INTEGER,
+                         ^
+
+./examples/schema-error.txt:5:5: ERROR: duplicate field in STRUCTURE type: field-1
+NOTE: fields within a STRUCTURE type must have unique names
+
+    field-1 [2] : STRING,   // bad field name
+    ^
+```
 
 
 ### Dumping a Parse Tree
 
 The in-memory data structure (AST) representing a TLV schema can be summarized using the `weave-tlv-schema dump` command: 
 
-    $ ./weave-tlv-schema dump examples/temp-sample.txt 
-    SchemaFile: examples/temp-sample.txt
+```console
+$ ./weave-tlv-schema dump examples/temp-sample.txt 
+SchemaFile: examples/temp-sample.txt
+  pos: 1:1-5:2 0-119
+  statements: (1) [
+    TypeDef: temperature-sample
       pos: 1:1-5:2 0-119
-      statements: (1) [
-        TypeDef: temperature-sample
-          pos: 1:1-5:2 0-119
+      quals: -
+      type:
+        StructureType:
+          pos: 1:23-5:2 22-119
           quals: -
-          type:
-            StructureType:
-              pos: 1:23-5:2 22-119
-              quals: -
-              members: (2) [
-                StructureField: timestamp
-                  pos: 3:5-3:54 38-87
-                  quals: (1) [
-                    Tag: 1 (context-specific)
-                      pos: 3:16-3:17 49-50
-                  ]
-                  type:
-                    UnsignedIntegerType:
-                      pos: 3:23-3:54 56-87
-                      quals: (1) [
-                        Range: width 32
-                          pos: 3:41-3:53 74-86
-                      ]
-                StructureField: temperature
-                  pos: 4:5-4:28 93-116
-                  quals: (1) [
-                    Tag: 2 (context-specific)
-                      pos: 4:18-4:19 106-107
-                  ]
-                  type:
-                    FloatType:
-                      pos: 4:23-4:28 111-116
-                      quals: -
+          members: (2) [
+            StructureField: timestamp
+              pos: 3:5-3:54 38-87
+              quals: (1) [
+                Tag: 1 (context-specific)
+                  pos: 3:16-3:17 49-50
               ]
-      ]
+              type:
+                UnsignedIntegerType:
+                  pos: 3:23-3:54 56-87
+                  quals: (1) [
+                    Range: width 32
+                      pos: 3:41-3:53 74-86
+                  ]
+            StructureField: temperature
+              pos: 4:5-4:28 93-116
+              quals: (1) [
+                Tag: 2 (context-specific)
+                  pos: 4:18-4:19 106-107
+              ]
+              type:
+                FloatType:
+                  pos: 4:23-4:28 111-116
+                  quals: -
+          ]
+  ]
+```
+
 
 ### Using the API
 
@@ -150,6 +164,10 @@ tempField = tempSampleType.getField('temperature')
 print('temperature field is a %s with tag %s' % (tempField.targetType.schemaConstruct, tempField.tag))
 ```
 
-    $ python3 ./code-sample.py 
-    temperature field is a FLOAT type with tag 2 (context-specific)
+The output:
+
+```console
+$ python3 ./code-sample.py 
+temperature field is a FLOAT type with tag 2 (context-specific)
+```
 
