@@ -136,8 +136,7 @@ SchemaFile: examples/temp-sample.txt
 ### Using the API
 
 The `WeaveTLVSchema` Python object provides programmatic access to the features of the openweave-tlv-schema package.
-Using this API, developers can parse Weave TLV schemas to produce an in-memory representation of the schema (an AST)
-which can then be queried for information:
+Using this API, developers can parse Weave TLV schemas into an AST, which can then be queried for information:
 
 ```python
 #!/usr/bin/env python3
@@ -163,6 +162,15 @@ tempSampleType = tlvSchema.getTypeDef('temperature-sample').targetType
 tempField = tempSampleType.getField('temperature')
 print('temperature field is a %s with tag %s' % (tempField.targetType.schemaConstruct, tempField.tag))
 ```
+
+The input:
+
+    temperature-sample => STRUCTURE
+    {
+        timestamp [1]   : UNSIGNED INTEGER [range 32bits],
+        temperature [2] : FLOAT,
+    }
+
 
 The output:
 
