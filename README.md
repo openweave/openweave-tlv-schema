@@ -1,4 +1,4 @@
-# The openweave-tlv-schema Package
+# OpenWeave TLV Schema Package
 
 openweave-tlv-schema is a set of Python-based libraries and tools for working with Weave TLV schemas.
 It is written in pure Python 3 and should work with any version of the language >= 3.6.
@@ -7,13 +7,20 @@ It is written in pure Python 3 and should work with any version of the language 
 ## Weave TLV Schema Language
 
 The _Weave TLV Schema_ language provides a simple textual format for describing data and other
-constructs typically used in Weave-based applications. Its primary use is to describe the
+constructs typically used in Weave-based applications. Its primary use is in describing the
 structure of data encoded in Weave TLV format, a compact binary data format targeting
-constrained IoT devices.  However, TLV schemas can also describe higher level Weave constructs
-such as Weave profiles, message types and status codes.  Emphasis is placed on the
-inherent readability of the language, making it well suited for use in protocol documentation
-and formal specifications.  Additionally, tools are provided for generating source code that
-can be used when building Weave-based applications.
+constrained IoT devices.  Weave TLV schemas can also describe higher-level Weave constructs such
+as Weave profiles, message types and status codes.  Emphasis is placed on the inherent readability
+of the language, making it well suited for use in protocol documentation and formal specifications.
+
+The specification for the Weave TLV Schema language can be found in the openweave-core repository: [weave-tlv-schema.pdf](https://github.com/openweave/openweave-core/blob/master/doc/specs/weave-tlv-schema.pdf).
+
+The Weave TLV encoding format sees use in a variety of contexts, including the over-the-wire
+representation of message payloads and storage of persistent data on embedded devices.  Although invented
+for use in the Weave suite of protocols, Weave TLV is a general-purpose format that is suitable for
+use wherever a low-overhead data representation is needed.
+
+The Weave TLV encoding format is described here: [weave-tlv-format.pdf](https://github.com/openweave/openweave-core/blob/master/doc/specs/weave-tlv-format.pdf)
 
 
 ## Building and Installing
