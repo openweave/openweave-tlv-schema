@@ -354,7 +354,7 @@ common => VENDOR [ id 0 ]
             elif re.search('[A-Za-z]', token):
                 msg = 'unexpected keyword: %s' % token
                 if re.match('[A-Za-z_][A-Za-z0-9_-]+$', token):
-                    detail = 'surround with single quotes to use as a name'
+                    detail = 'surround with double quotes to use as a name'
             else:
                 msg = 'unexpected input: %s' % token
                 
