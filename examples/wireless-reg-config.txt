@@ -1,0 +1,65 @@
+/*
+ *
+ *    Copyright (c) 2020 Google LLC.
+ *    All rights reserved.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+/*
+ *    Example schema illustrating the wireless regulatory schema constructs
+ *    from the Weave Network Provisioning profile.
+ */
+
+
+SetWirelessRegulatoryConfigArguments [anon] => STRUCTURE
+{
+    /** ISO 3166-1 country code, or "00" for world-wide.
+     */
+    regulatoryDomain [1, optional] : STRING [len 2],
+
+    /** Operating location relevant to wireless regulatory rules.
+     */
+    operatingLocation [2, optional] : UNSIGNED INTEGER [range 0..255]
+    {
+        reserved = 0,  /* may not be sent. */  
+        unknown = 1,
+        indoors = 2,
+        outdoors = 3
+    }
+}
+
+GetWirelessRegulatoryConfigResults [anon] => STRUCTURE
+{
+    /** ISO 3166-1 country code, or "00" for world-wide, or
+     *  null if unknown.
+     */
+    regulatoryDomain [1] : STRING [len 2, nullable],
+
+    /** Operating location relevant to wireless regulatory rules,
+     *  or null if unknown.
+     */
+    operatingLocation [2] : UNSIGNED INTEGER [range 0..255, nullable]
+    {
+        reserved = 0,  /* may not be sent. */  
+        unknown = 1,
+        indoors = 2,
+        outdoors = 3
+    },
+
+    /** List of support regulatory domains.
+     */
+    supportedRegulatoryDomains [3] : ARRAY OF STRING [len 2]
+}
+
+
