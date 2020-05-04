@@ -19,6 +19,9 @@
 //   @file
 //     Syntax for Weave Schema, in Lark parser EBNF. 
 //
+//     See https://github.com/lark-parser/lark for further information on
+//     the lark parser generator.
+//
 
 %import common.LETTER
 %import common.DIGIT

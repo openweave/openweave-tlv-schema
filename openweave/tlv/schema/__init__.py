@@ -17,7 +17,7 @@
 
 #
 #    @file
-#      Provides Python APIs for working with Weave TLV Schemas. 
+#      Package init file for openweave.tlv.schema. 
 #
 
 '''Provides Python APIs for working with Weave TLV Schemas.'''
