@@ -28,15 +28,9 @@ import os
 import argparse
 from .obj import WeaveTLVSchema
 from .error import WeaveTLVSchemaError
+from .generator import DefinitionsHeaderGenerator
 
 scriptName = os.path.basename(sys.argv[0])
-
-class _UsageError(Exception):
-    pass
-
-class _ArgumentParser(argparse.ArgumentParser):
-    def error(self, message):
-        raise _UsageError('{0}: {1}'.format(self.prog, message))
 
 class _ValidateCommand(object):
     
@@ -90,6 +84,78 @@ class _ValidateCommand(object):
         
         return len(errs)
 
+class _GenDefsHeaderCommand(object):
+    
+    name = 'gen-defs-header'
+    summary = 'Generate a C++ header file containing numeric values derived from a Weave TLV Schema'
+    help = ('{0} gen-defs-header : {1}\n'
+            '\n'
+            'Usage:\n'
+            '  {0} gen-defs-header [options...] {{schema-files...}}\n'
+            '\n'
+            '  -o|--out {{output-file}}\n'
+            '    Write the generated code into the named file.  If not specified, the\n'
+            '    command writes to stdout.\n'
+            '\n'
+            '  -c|--config {{config-file}}\n'
+            '    Read a file containing a set of configuration values controlling the\n'
+            '    code generation process. Multiple --config options may be supplied, with\n'
+            '    values in later files overriding those in earlier files.\n'
+        ).format(scriptName, summary)
+
+    def run(self, args):
+        argParser = _ArgumentParser(prog='{0} {1}'.format(scriptName, self.name),
+                                         add_help=False)
+        argParser.add_argument('-c', '--config', action='append', dest='configFileNames')
+        argParser.add_argument('-o', '--out', dest='outFileName')
+        argParser.add_argument('schemaFileNames', nargs='*')
+        args = argParser.parse_args(args)
+        
+        if len(args.schemaFileNames) == 0:
+            raise _UsageError('{0} {1}: Please specify one or more schema files'.format(scriptName, self.name))
+
+        for configFileName in args.configFileNames:
+            if not os.path.exists(configFileName):
+                raise _UsageError('{0} {1}: Configuration file not found: {0}\n'.format(scriptName, self.name, configFileName))
+
+        schema = WeaveTLVSchema()
+
+        errs = []
+
+        for schemaFileName in args.schemaFileNames:
+            if not os.path.exists(schemaFileName):
+                raise _UsageError('{0} {1}: Schema file not found: {0}\n'.format(scriptName, self.name, schemaFileName))
+            try:
+                schema.loadSchemaFromFile(schemaFileName)
+            except WeaveTLVSchemaError as err:
+                errs.append(err)
+
+        errs += schema.validate()
+        
+        if len(errs) != 0:        
+            for err in errs:
+                print("%s\n" % err.format(), file=sys.stderr)
+            return len(errs)
+
+        if args.outFileName:
+            outStream = open(args.outFileName, 'w')
+        else:
+            outStream = sys.stdout 
+        
+        try:
+            gen = DefinitionsHeaderGenerator(schema, outStream, outFileName=args.outFileName)
+
+            for configFileName in args.configFileNames:
+                gen.config.loadConfigFromFile(configFileName)
+        
+            gen.generate()
+        
+        finally:
+            if outStream != sys.stdout:
+                outStream.close()
+
+        return 0
+
 class _DumpCommand(object):
     
     name = 'dump'
@@ -116,7 +182,7 @@ class _DumpCommand(object):
                 raise _UsageError('{0} {1}: Schema file not found: {0}\n'.format(scriptName, self.name, schemaFileName))
             schema.loadSchemaFromFile(schemaFileName)
             
-        for schemaFile in schema.allFiles():
+        for schemaFile in schema.schemaFiles:
             schemaFile.summarize(sys.stdout)
             
         return 0
@@ -187,6 +253,13 @@ class _HelpCommand(object):
         
         return 0
 
+class _UsageError(Exception):
+    pass
+
+class _ArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        raise _UsageError('{0}: {1}'.format(self.prog, message))
+
 def main():
 
     try:
@@ -194,6 +267,7 @@ def main():
         # Construct a list of the available commands.
         commands = [
             _ValidateCommand(),
+            _GenDefsHeaderCommand(),
             _DumpCommand(),
             _UnitTestCommand()
         ]
@@ -225,6 +299,10 @@ def main():
             raise _UsageError('Unrecognized command: {1}\nRun "{0} help" for a list of available commands.'.format(scriptName, args.commandName))
 
     except _UsageError as ex:
+        print(str(ex), file=sys.stderr)
+        return -1
+    
+    except OSError as ex:
         print(str(ex), file=sys.stderr)
         return -1
     

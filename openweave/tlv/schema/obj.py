@@ -48,7 +48,7 @@ common => VENDOR [ id 0 ]
                 schemaSyntax = s.read()
                 WeaveTLVSchema._schemaParser = Lark(schemaSyntax, parser='lalr', lexer='standard', 
                                                     start='file', propagate_positions=True)
-        self._schemaFiles = []
+        self.schemaFiles = []
         self._vendors = defaultdict(list)
         self._namespaces = defaultdict(list)
         self._profiles = defaultdict(list)
@@ -60,6 +60,9 @@ common => VENDOR [ id 0 ]
            If successful, a SchemaFile object is returned.
            If fileName is given, it is used to set the fileName attribute of the returned
            SchemaFile. This can be useful in error reporting.'''
+
+        self.loadDefaultSchema()
+        
         if fileName is None:
             if hasattr(stream, 'name'):
                 fileName = stream.name
@@ -75,7 +78,7 @@ common => VENDOR [ id 0 ]
         except LarkError as parseErr:
             raise self._translateParseError(parseErr, schemaFile) from None
         
-        self._schemaFiles.append(schemaFile)
+        self.schemaFiles.append(schemaFile)
         self._indexNodes(schemaFile)
 
         return schemaFile
@@ -100,14 +103,13 @@ common => VENDOR [ id 0 ]
            in all schemas.
            Note that calling validate() automatically loads the default schema.'''
         if not self._defaultSchemaLoaded:        
-            self.loadSchemaFromString(self._defaultSchema, fileName='(default)')
             self._defaultSchemaLoaded = True
+            self.loadSchemaFromString(self._defaultSchema, fileName='(default)')
 
     def validate(self, errs=None):
         '''Check the loaded schema files for syntactical and structural errors and
            return a list of exceptions describing any errors found.'''
         errs = errs if errs is not None else []
-        self.loadDefaultSchema()
         self._resolveTypeReferences(errs)
         self._resolveVendorReferences(errs)
         self._resolveProfileReferences(errs)
@@ -120,15 +122,10 @@ common => VENDOR [ id 0 ]
     
     def allNodes(self, classinfo=object):
         '''Iterate for all nodes and their descendants, if they are instances of classinfo.'''
-        for schemaFile in self._schemaFiles:
+        for schemaFile in self.schemaFiles:
             for node in schemaFile.allNodes():
                 if isinstance(node, classinfo):
                     yield node
-
-    def allFiles(self):
-        '''Iterate for all schema files.'''
-        for schemaFile in self._schemaFiles:
-            yield schemaFile
 
     def getTypeDef(self, typeName):
         '''Lookup a TypeDef node by name.
@@ -302,9 +299,8 @@ common => VENDOR [ id 0 ]
 
 
     def _translateParseError(self, parseErr, schemaFile):
-        # If a WeaveTLVSchemaError was raised during the tree transformation process
-        # raise that error directly.
-        if isinstance(parseErr, VisitError) and isinstance(parseErr.orig_exc, WeaveTLVSchemaError):
+        # If an error was raised during the tree transformation process raise that error directly.
+        if isinstance(parseErr, VisitError):
             return parseErr.orig_exc
         
         if isinstance(parseErr, UnexpectedCharacters):
