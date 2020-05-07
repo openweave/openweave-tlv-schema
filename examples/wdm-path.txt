@@ -24,7 +24,7 @@
 wdm-path => LIST
 {
     locator [1]                 : wdm-locator,
-                                ANY *
+    path-elems                  : ANY *
 }
 
 wdm-locator => STRUCTURE [any-order]
