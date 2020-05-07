@@ -156,6 +156,9 @@ common => VENDOR [ id 0 ]
             return vendorList[0]
         return None
     
+    def getNamespaces(self, namespaceName):
+        return self._namespaces[namespaceName]
+    
     # ----- Private Members
 
     def _indexNodes(self, schemaFile):

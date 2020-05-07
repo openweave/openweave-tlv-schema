@@ -107,14 +107,14 @@ class _SchemaTransformer(Transformer):
         if len(children) > 0:
             child = children.pop(0)
             if isinstance(child, TypeNode):
-                node.payload = child
+                node.type = child
             else:
                 assert child.data == 'containing_nothing'
                 node.emptyPayload = True
         assert len(children) == 0
         self._setParent(node.quals, node)
-        if isinstance(node.payload, SchemaNode):
-            self._setParent(node.payload, node)
+        if isinstance(node.type, SchemaNode):
+            self._setParent(node.type, node)
         return node
 
     @v_args(meta=True)

@@ -74,9 +74,39 @@ class HasScopedName(HasName):
         else:
             return self.name
 
+    def isInNamespace(self, nsName):
+        nodeNsName = self.namespaceName
+        return (nsName == '' or 
+                nodeNsName == nsName or 
+                (nodeNsName.startswith(nsName) and nodeNsName[len(nsName)] == '.'))
+
     @property
     def _summaryTitle(self):
         return '%s: %s' % (type(self).__name__, self.fullyQualifiedName)
+
+class HasType(object):
+    '''Mixin for SchemaNodes that have an underlying type'''
+    
+    def __init__(self, *args, **kwargs):
+        super(HasType, self).__init__(*args, **kwargs)
+        self.type = None
+    
+    @property
+    def targetType(self):
+        '''The type node to which the underlying type ultimately refers.
+           If the underlying type is a ReferencedType, the returned node is the ultimate
+           target type of the referenced type.
+           Otherwise, the returned node is the underlying type node itself.'''
+        if isinstance(self.type, ReferencedType):
+            return self.type.targetType
+        else:
+            return self.type
+
+    def allChildNodes(self):
+        for node in super(HasType, self).allChildNodes():
+            yield node
+        if self.type is not None:
+            yield self.type
 
 class HasQualifiers(object):
     '''Mixin for SchemaNodes that can have qualifiers'''
@@ -285,6 +315,24 @@ class SequencedTypeNode(HasQualifiers, TypeNode):
         self.elemType = None
         self.elemTypePattern = None
 
+    @property
+    def isUniform(self):
+        '''True if the node represents a uniform ARRAY or LIST.'''
+        return self.elemType is not None
+
+    @property
+    def targetElemType(self):
+        '''For a uniform ARRAY or LIST, the type node to which the underlying element type
+           ultimately refers.  If the element type is a ReferencedType, the returned node
+           is the ultimate target type of the referenced type.  If it is some other type,
+           the element type node itself is returned.  If the node is a pattern ARRAY or
+           LIST a None is returned.'''
+        if self.isUniform:
+            if isinstance(self.elemType, ReferencedType):
+                return self.elemType.targetType
+            else:
+                return self.elemType
+
     def allChildNodes(self):
         for node in super(SequencedTypeNode, self).allChildNodes():
             yield node
@@ -305,7 +353,7 @@ class SequencedTypeNode(HasQualifiers, TypeNode):
     def validate(self, errs):
         super(SequencedTypeNode, self).validate(errs)
         # for uniform array/list...
-        if self.elemType is not None:
+        if self.isUniform:
             # Confirm element type is not FIELD GROUP or reference to such.
             self._checkIsNotFieldGroup(self.elemType, errs)
         # for pattern array/list...
@@ -319,7 +367,7 @@ class SequencedTypeNode(HasQualifiers, TypeNode):
     def _summarize(self, output, level, indent):
         super(SequencedTypeNode, self)._summarize(output, level, indent)
         level += 1
-        if self.elemType is not None:
+        if self.isUniform:
             output.write('%selemType:\n' % (level*indent))
             self.elemType._summarize(output, level+1, indent)
         elif self.elemTypePattern is not None:
@@ -349,6 +397,12 @@ class StructuredTypeNode(HasQualifiers, TypeNode):
             elif isinstance(member, StructureField):
                 yield member
     
+    def allMembers(self, classinfo=object):
+        '''Enumerates all members of the current node, if they are instances of classinfo.'''
+        for member in self.members:
+            if isinstance(member, classinfo):
+                yield member
+        
     def allFieldsWithIncludes(self):
         '''Enumerates all StructureField nodes associated with the current node, and their a
            corresponding StructureIncludes node, if any.
@@ -672,6 +726,10 @@ class Namespace(HasScopedName, HasDocumentation, SchemaNode):
         super(Namespace, self).__init__(sourceRef)
         self.statements = None
     
+    @property
+    def isLeafNamespace(self):
+        return not any(True for _ in self.allStatements(Namespace)) 
+        
     def allChildNodes(self):
         for node in super(Namespace, self).allChildNodes():
             yield node
@@ -824,7 +882,7 @@ class Profile(HasQualifiers, Namespace):
             else:
                 statusCodesById[sc.id] = sc
 
-class Message(HasScopedName, HasQualifiers, HasDocumentation, SchemaNode):
+class Message(HasScopedName, HasQualifiers, HasType, HasDocumentation, SchemaNode):
     '''Represents a MESSAGE definition'''
 
     _schemaConstruct = 'MESSAGE definition'
@@ -832,7 +890,6 @@ class Message(HasScopedName, HasQualifiers, HasDocumentation, SchemaNode):
 
     def __init__(self, sourceRef=None):
         super(Message, self).__init__(sourceRef)
-        self.payload = None
         self.emptyPayload = False
     
     @property
@@ -842,23 +899,15 @@ class Message(HasScopedName, HasQualifiers, HasDocumentation, SchemaNode):
             return idQual.idNum
         else:
             return None
-        
+
     @property
     def payloadType(self):
-        if not self.emptyPayload:
-            if isinstance(self.payload, ReferencedType):
-                return self.payload.targetType
-            else:
-                return self.payload
-        else:
-            return None
-
-    def allChildNodes(self):
-        for node in super(Message, self).allChildNodes():
-            yield node
-        if self.payload is not None:
-            yield self.payload
-
+        return self.type
+        
+    @property
+    def targetPayloadType(self):
+        return self.targetType
+        
     def validate(self, errs):
         super(Message, self).validate(errs)
         # Confirm that MESSAGE is directly within a PROFILE definition
@@ -881,9 +930,9 @@ class Message(HasScopedName, HasQualifiers, HasDocumentation, SchemaNode):
     def _summarize(self, output, level, indent):
         super(Message, self)._summarize(output, level, indent)
         level += 1
-        if self.payload:
+        if self.type:
             output.write('%spayload:\n' % (level*indent))
-            self.payload._summarize(output, level+1, indent)
+            self.type._summarize(output, level+1, indent)
         elif self.emptyPayload:
             output.write('%spayload: empty\n' % (level*indent))
         else:
@@ -923,26 +972,11 @@ class StatusCode(HasScopedName, HasQualifiers, HasDocumentation, SchemaNode):
                                 sourceRef=idQual.sourceRef)
 
 
-class TypeDef(HasScopedName, HasQualifiers, HasDocumentation, SchemaNode):
+class TypeDef(HasScopedName, HasQualifiers, HasType, HasDocumentation, SchemaNode):
     '''Represents a type definition'''
 
     _schemaConstruct = 'type definition'
     _allowedQualifiers = (Tag)
-
-    def __init__(self, sourceRef=None):
-        super(TypeDef, self).__init__(sourceRef)
-        self.type = None
-
-    @property
-    def targetType(self):
-        '''The type object to which the type definition ultimately refers.
-           If the underlying type of the type definition is a ReferencedType, the returned
-           type is the ultimate target type of the referenced type.
-           Otherwise, the returned type is the underlying type of the type definition.'''
-        if isinstance(self.type, ReferencedType):
-            return self.type.targetType
-        else:
-            return self.type
 
     @property
     def defaultTag(self):
@@ -958,12 +992,6 @@ class TypeDef(HasScopedName, HasQualifiers, HasDocumentation, SchemaNode):
             return self.type.defaultTag
         else:
             return None
-
-    def allChildNodes(self):
-        for node in super(TypeDef, self).allChildNodes():
-            yield node
-        if self.type is not None:
-            yield self.type
 
     def _summarize(self, output, level, indent):
         super(TypeDef, self)._summarize(output, level, indent)
@@ -1200,7 +1228,7 @@ class IntegerEnumValue(HasName, HasDocumentation, SchemaNode):
     def _summaryTitle(self):
         return '%s: %s = %d' % (type(self).__name__, self.name, self.value)
 
-class StructureField(HasName, HasQualifiers, HasDocumentation, SchemaNode):
+class StructureField(HasName, HasQualifiers, HasType, HasDocumentation, SchemaNode):
     '''Represents an individual field within a STRUCTURE or FIELD GROUP type.'''
 
     _schemaConstruct = 'STRUCTURE or FIELD GROUP field'
@@ -1208,20 +1236,8 @@ class StructureField(HasName, HasQualifiers, HasDocumentation, SchemaNode):
 
     def __init__(self, sourceRef=None):
         super(StructureField, self).__init__(sourceRef)
-        self.type = None
         self._possibleTags = None
         
-    @property
-    def targetType(self):
-        '''The type object to which the field ultimately refers.
-           If the underlying type of the field is a ReferencedType, the returned
-           type is the ultimate target type of the referenced name.
-           Otherwise, the returned type is the field's underlying type.'''
-        if isinstance(self.type, ReferencedType):
-            return self.type.targetType
-        else:
-            return self.type
-
     @property
     def tag(self):
         '''The effective tag qualifier for the field.
@@ -1240,6 +1256,12 @@ class StructureField(HasName, HasQualifiers, HasDocumentation, SchemaNode):
             raise AmbiguousTagError()
 
     @property
+    def assignedTag(self):
+        '''The tag qualifier assigned specifically to the field, or None if no tag
+           has been assigned.'''
+        return self.getQualifier(Tag)
+
+    @property
     def possibleTags(self):
         '''A list of all possible tag qualifiers for the field.
            If a tag qualifier is attached directly to the field, the list will contain
@@ -1253,7 +1275,7 @@ class StructureField(HasName, HasQualifiers, HasDocumentation, SchemaNode):
            If no tag has been specified, either directly or indirectly, an empty list is
            returned.'''
         if self._possibleTags is None:
-            tag = self.getQualifier(Tag)
+            tag = self.assignedTag
             if tag is None:
                 type = self.type
                 if isinstance(type, ReferencedType):
@@ -1266,12 +1288,6 @@ class StructureField(HasName, HasQualifiers, HasDocumentation, SchemaNode):
             else:
                 self._possibleTags = []
         return self._possibleTags
-
-    def allChildNodes(self):
-        for node in super(StructureField, self).allChildNodes():
-            yield node
-        if self.type is not None:
-            yield self.type
 
     def validate(self, errs):
         super(StructureField, self).validate(errs)
@@ -1306,27 +1322,12 @@ class StructureIncludes(SchemaNode):
     def _summaryTitle(self):
         return '%s: %s' % (type(self).__name__, self.targetName)
     
-class ChoiceAlternate(HasName, HasQualifiers, HasDocumentation, SchemaNode):
+class ChoiceAlternate(HasName, HasQualifiers, HasType, HasDocumentation, SchemaNode):
     '''Represents a type alternate within a CHOICE type.'''
 
     _schemaConstruct = 'CHOICE alternate'
     _allowedQualifiers = (Tag)
 
-    def __init__(self, sourceRef=None):
-        super(ChoiceAlternate, self).__init__(sourceRef)
-        self.type = None
-
-    @property
-    def targetType(self):
-        '''The type object to which the alternate ultimately refers.
-           If the underlying type of the alternate is a ReferencedType, the returned
-           type is the ultimate target type of the referenced name.
-           Otherwise, the returned type is the alternate's underlying type.'''
-        if isinstance(self.type, ReferencedType):
-            return self.type.targetType
-        else:
-            return self.type
-        
     @property
     def isLeafAlternate(self):
         '''True if the alternate is a leaf alternate.
@@ -1350,12 +1351,6 @@ class ChoiceAlternate(HasName, HasQualifiers, HasDocumentation, SchemaNode):
         else:
             return None
 
-    def allChildNodes(self):
-        for node in super(ChoiceAlternate, self).allChildNodes():
-            yield node
-        if self.type is not None:
-            yield self.type
-
     def validate(self, errs):
         super(ChoiceAlternate, self).validate(errs)
         self._checkIsNotFieldGroup(self.type, errs)
@@ -1366,29 +1361,18 @@ class ChoiceAlternate(HasName, HasQualifiers, HasDocumentation, SchemaNode):
         output.write('%stype:\n' % (level*indent))
         self.type._summarize(output, level+1, indent)
 
-class LinearTypePatternElement(HasName, HasQualifiers, HasDocumentation, SchemaNode):
+class LinearTypePatternElement(HasName, HasQualifiers, HasType, HasDocumentation, SchemaNode):
     '''Represents a single type element within a linear type pattern.'''
 
     _schemaConstruct = 'linear type pattern element'
-    # NOTE: _allowedQualifiers is dynamic for LinearTypePatternElement nodes
+    # NOTE: _allowedQualifiers is dynamic for LinearTypePatternElement nodes. See
+    # implementation below.
 
     def __init__(self, sourceRef=None):
         super(LinearTypePatternElement, self).__init__(sourceRef)
-        self.type = None
         self.lowerBound = None
         self.upperBound = None
         self._possibleTags = None
-
-    @property
-    def targetType(self):
-        '''The type object to which the element ultimately refers.
-           If the underlying type of the element is a ReferencedType, the returned
-           type is the ultimate target type of the referenced name.
-           Otherwise, the returned type is the element's underlying type.'''
-        if isinstance(self.type, ReferencedType):
-            return self.type.targetType
-        else:
-            return self.type
 
     @property
     def tag(self):
@@ -1434,12 +1418,6 @@ class LinearTypePatternElement(HasName, HasQualifiers, HasDocumentation, SchemaN
             else:
                 self._possibleTags = []
         return self._possibleTags
-
-    def allChildNodes(self):
-        for node in super(LinearTypePatternElement, self).allChildNodes():
-            yield node
-        if self.type is not None:
-            yield self.type
 
     @property
     def _allowedQualifiers(self):

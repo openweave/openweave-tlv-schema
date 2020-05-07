@@ -24,7 +24,7 @@
 
 import unittest
 
-from ..node import ArrayType, SignedIntegerType
+from ..node import ArrayType, SignedIntegerType, ReferencedType
 from .testutils import TLVSchemaTestCase
 
 class Test_MESSAGE(TLVSchemaTestCase):
@@ -46,11 +46,11 @@ class Test_MESSAGE(TLVSchemaTestCase):
         profile1 = tlvSchema.getProfile('profile1')
         msg1 = profile1.getMessage('msg1')
         self.assertEqual(msg1.id, 1)
-        self.assertIsNone(msg1.payload)
+        self.assertIsNone(msg1.payloadType)
         self.assertFalse(msg1.emptyPayload)
         msg2 = profile1.getMessage('msg2')
         self.assertEqual(msg2.id, 2)
-        self.assertIsNone(msg2.payload)
+        self.assertIsNone(msg2.payloadType)
         self.assertTrue(msg2.emptyPayload)
         msg3 = profile1.getMessage('msg3')
         self.assertEqual(msg3.id, 3)
@@ -58,7 +58,8 @@ class Test_MESSAGE(TLVSchemaTestCase):
         self.assertFalse(msg3.emptyPayload)
         msg4 = profile1.getMessage('msg4')
         self.assertEqual(msg4.id, 4)
-        self.assertIsInstance(msg4.payloadType, SignedIntegerType)
+        self.assertIsInstance(msg4.payloadType, ReferencedType)
+        self.assertIsInstance(msg4.targetPayloadType, SignedIntegerType)
         self.assertFalse(msg4.emptyPayload)
 
     def test_MESSAGE_NoId(self):
