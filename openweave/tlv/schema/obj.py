@@ -245,7 +245,7 @@ common => VENDOR [ id 0 ]
                     if refNode.targetTypeDef.type in visitedRefNodes:
                         _addSchemaError(errs, msg='circular type reference: %s' % refNode.targetName,
                                         detail='the given type reference ultimately refers to itself',
-                                        sourceRef=refNode.nameSourceRef)
+                                        sourceRef=refNode.sourceRef)
                         break
                     refNode = refNode.targetTypeDef.type
                 else:

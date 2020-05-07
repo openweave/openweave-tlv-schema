@@ -414,14 +414,14 @@ class StructuredTypeNode(HasQualifiers, TypeNode):
                 possibleTags = member.possibleTags
                 if len(possibleTags) == 0 or None in possibleTags:
                     if isinstance(member.targetType, ChoiceType):
-                        _addSchemaError(errs, msg='missing tag',
+                        _addSchemaError(errs, msg='missing tag on %s field: %s' % (self.schemaConstruct, member.name),
                                         detail='all CHOICE OF alternates within a %s field must declare an associated tag' % self.schemaConstruct,
                                         sourceRef=member.sourceRef)
                     else:
-                        _addSchemaError(errs, msg='missing tag',
+                        _addSchemaError(errs, msg='missing tag on %s field: %s' % (self.schemaConstruct, member.name),
                                         detail='fields within a %s must declare an associated tag' % self.schemaConstruct,
                                         sourceRef=member.sourceRef)
-                if any((tag.isAnonTag for tag in possibleTags)):
+                if any((tag.isAnonTag for tag in possibleTags if tag is not None)):
                     _addSchemaError(errs, msg='invalid use of anonymous tag',
                                     detail='fields within a %s cannot declare an anonymous tag' % self.schemaConstruct,
                                     sourceRef=member.sourceRef)
@@ -1124,6 +1124,9 @@ class ChoiceType(HasQualifiers, TypeNode):
                 for nestedAltChain in alt.targetType.allLeafAlternateChains(superiorAltChain=altChain):
                     yield nestedAltChain
 
+    def getAlternate(self, altName):
+        return next((a for a in self.alternates if a.name == altName), None)
+
     def validate(self, errs):
         super(ChoiceType, self).validate(errs)
         self._checkDuplicateAlternateNames(errs)
@@ -1168,7 +1171,7 @@ class ReferencedType(TypeNode):
     @property
     def defaultTag(self):
         '''The effective default tag associated with the underlying type definition.'''
-        return self.targetTypeDef.defaultTag
+        return self.targetTypeDef.defaultTag if self.targetTypeDef is not None else None
 
     def _summarize(self, output, level, indent):
         super(ReferencedType, self)._summarize(output, level, indent)

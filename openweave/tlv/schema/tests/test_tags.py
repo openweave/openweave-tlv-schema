@@ -24,8 +24,7 @@
 
 import unittest
 
-from openweave.tlv.schema import WeaveTLVSchema
-from openweave.tlv.schema.node import TypeDef
+from ..node import TypeDef
 from .testutils import TLVSchemaTestCase
 
 class Test_Tags(TLVSchemaTestCase):

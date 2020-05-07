@@ -24,7 +24,7 @@
 
 import unittest
 
-from openweave.tlv.schema.node import ArrayType, SignedIntegerType
+from ..node import ArrayType, SignedIntegerType
 from .testutils import TLVSchemaTestCase
 
 class Test_MESSAGE(TLVSchemaTestCase):
