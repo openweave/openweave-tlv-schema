@@ -28,8 +28,8 @@ import sys
 import os
 import io
 
-from openweave.tlv.schema import WeaveTLVSchema
-from openweave.tlv.schema.error import WeaveTLVSchemaError
+from .. import WeaveTLVSchema
+from ..error import WeaveTLVSchemaError
 
 class TLVSchemaTestCase(unittest.TestCase):
 

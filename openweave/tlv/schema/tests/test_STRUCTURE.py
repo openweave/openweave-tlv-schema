@@ -216,6 +216,36 @@ class Test_STRUCTURE(TLVSchemaTestCase):
         self.assertError(errs, 'duplicate tag in FIELD GROUP type: 0 (context-specific)')
         self.assertError(errs, 'duplicate tag in STRUCTURE type: 0 (context-specific)')
 
+    def test_STRUCTURE_MissingTags(self):
+        schemaText = '''
+                     s => STRUCTURE
+                     {
+                         f1 [0] : INTEGER,
+                         f2     : STRING, // this field is missing a tag
+                     }
+                     '''
+        (tlvSchema, errs) = self.loadValidate(schemaText)
+        self.assertErrorCount(errs, 1)
+        self.assertError(errs, 'missing tag on STRUCTURE type field: f2')
+
+    def test_STRUCTURE_MissingTags_ChoiceAlternate(self):
+        schemaText = '''
+                     s => STRUCTURE
+                     {
+                         f1 : CHOICE OF
+                         {
+                             alt1 : STRUCTURE // this alternate does not declare a tag
+                             {
+                                 f1 [0] : NULL
+                             },
+                             alt2 [0] : INTEGER
+                         }
+                     }
+                     '''
+        (tlvSchema, errs) = self.loadValidate(schemaText)
+        self.assertErrorCount(errs, 1)
+        self.assertError(errs, 'missing tag on STRUCTURE type field: f1')
+
     def test_STRUCTURE_possibleTags(self):
         schemaText = '''
                      s => STRUCTURE
@@ -251,7 +281,7 @@ class Test_STRUCTURE(TLVSchemaTestCase):
                      }
                      '''
         (tlvSchema, errs) = self.loadValidate(schemaText)
-        self.assertErrorCount(errs, 0)
+        self.assertNoErrors(errs)
         s = tlvSchema.getTypeDef('s').targetType
         # field f1
         possibleTags = s.getField('f1').possibleTags
