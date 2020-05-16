@@ -39,7 +39,7 @@ class Test_Tags(TLVSchemaTestCase):
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self.assertNoErrors(errs)
         typeDefNode = next(tlvSchema.allNodes(TypeDef))
-        tagNode = typeDefNode.defaultTag
+        tagNode = typeDefNode.tag
         self.assertEqual(tagNode.profileId, 0xABCD1234)
         self.assertEqual(tagNode.tagNum, 42)
 
@@ -106,28 +106,44 @@ class Test_Tags(TLVSchemaTestCase):
                      '''
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self.assertNoErrors(errs)
-        tag = tlvSchema.getTypeDef('type-1').defaultTag
+
+        tag = tlvSchema.getTypeDef('type-1').tag
         self.assertEqual(tag.profileId, 0x253A0000)
         self.assertEqual(tag.tagNum, 1)
-        tag = tlvSchema.getTypeDef('ns-1.type-2').defaultTag
+
+        tag = tlvSchema.getTypeDef('ns-1.type-2').tag
+        self.assertIsNone(tag)
+        tag = tlvSchema.getTypeDef('ns-1.type-2').effectiveTag
         self.assertEqual(tag.profileId, 0x253A0000)
         self.assertEqual(tag.tagNum, 1)
-        tag = tlvSchema.getTypeDef('ns-1.type-3').defaultTag
+
+        tag = tlvSchema.getTypeDef('ns-1.type-3').effectiveTag
         self.assertEqual(tag.profileId, 0x12345678)
         self.assertEqual(tag.tagNum, 3)
-        tag = tlvSchema.getTypeDef('profile-1.type-4').defaultTag
+
+        tag = tlvSchema.getTypeDef('profile-1.type-4').tag
         self.assertEqual(tag.profileId, None)
         self.assertEqual(tag.tagNum, 4)
-        tag = tlvSchema.getTypeDef('profile-1.type-5').defaultTag
+        
+        tag = tlvSchema.getTypeDef('profile-1.type-5').tag
+        self.assertIsNone(tag)
+        tag = tlvSchema.getTypeDef('profile-1.type-5').effectiveTag
         self.assertEqual(tag.profileId, 0x253A0000)
         self.assertEqual(tag.tagNum, 1)
-        tag = tlvSchema.getTypeDef('profile-1.type-6').defaultTag
+        
+        tag = tlvSchema.getTypeDef('profile-1.type-6').tag
+        self.assertIsNone(tag)
+        tag = tlvSchema.getTypeDef('profile-1.type-6').effectiveTag
         self.assertEqual(tag.profileId, 0x253A0000)
         self.assertEqual(tag.tagNum, 1)
-        tag = tlvSchema.getTypeDef('profile-1.type-7').defaultTag
+
+        tag = tlvSchema.getTypeDef('profile-1.type-7').tag
+        self.assertIsNone(tag)
+        tag = tlvSchema.getTypeDef('profile-1.type-7').effectiveTag
         self.assertEqual(tag.profileId, 0x12345678)
         self.assertEqual(tag.tagNum, 3)
-        tag = tlvSchema.getTypeDef('profile-1.type-8').defaultTag
+
+        tag = tlvSchema.getTypeDef('profile-1.type-8').effectiveTag
         self.assertEqual(tag.profileId, 0xAAAABBBB)
         self.assertEqual(tag.tagNum, 8)
 
@@ -173,16 +189,16 @@ class Test_Tags(TLVSchemaTestCase):
         tag = struct1.getField('field-2').tag
         self.assertEqual(tag.profileId, 0xAAAABBBB)
         self.assertEqual(tag.tagNum, 2)
-        tag = struct1.getField('field-3').tag
+        tag = struct1.getField('field-3').effectiveTag
         self.assertEqual(tag.profileId, 0x253A0000)
         self.assertEqual(tag.tagNum, 1)
-        tag = struct1.getField('field-4').tag
+        tag = struct1.getField('field-4').effectiveTag
         self.assertEqual(tag.profileId, 0x12345678)
         self.assertEqual(tag.tagNum, 3)
-        tag = struct1.getField('field-5').tag
+        tag = struct1.getField('field-5').effectiveTag
         self.assertEqual(tag.profileId, None)
         self.assertEqual(tag.tagNum, 5)
-        tag = struct1.getField('field-6').tag
+        tag = struct1.getField('field-6').effectiveTag
         self.assertEqual(tag.profileId, None)
         self.assertEqual(tag.tagNum, 42)
 
@@ -204,26 +220,26 @@ class Test_Tags(TLVSchemaTestCase):
                      
                          list-1 => LIST
                          {
-                             elem-1 [ 1 ]    : type-1,            // Tag should be context-specific 1
-                             elem-2 [ *:2 ]  : type-1,            // Tag should be profile-specific 0xAAAABBBB:2
-                             elem-3          : ns-1.type-2,       // Tag should be profile-specific 0x253A0000:1
-                             elem-4          : ns-1.type-3,       // Tag should be profile-specific 0x12345678:3
+                             elem-1 [ 1 ]    : type-1,            // Effective tag should be context-specific 1
+                             elem-2 [ *:2 ]  : type-1,            // Effective tag should be profile-specific 0xAAAABBBB:2
+                             elem-3          : ns-1.type-2,       // Effective tag should be profile-specific 0x253A0000:1
+                             elem-4          : ns-1.type-3,       // Effective tag should be profile-specific 0x12345678:3
                          }
                      }
                      '''
         (tlvSchema, errs) = self.loadValidate(schemaText)
         self.assertNoErrors(errs)
         list1 = tlvSchema.getTypeDef('profile-1.list-1').type
-        tag = list1.getElement('elem-1').tag
+        tag = list1.getElement('elem-1').effectiveTag
         self.assertEqual(tag.profileId, None)
         self.assertEqual(tag.tagNum, 1)
-        tag = list1.getElement('elem-2').tag
+        tag = list1.getElement('elem-2').effectiveTag
         self.assertEqual(tag.profileId, 0xAAAABBBB)
         self.assertEqual(tag.tagNum, 2)
-        tag = list1.getElement('elem-3').tag
+        tag = list1.getElement('elem-3').effectiveTag
         self.assertEqual(tag.profileId, 0x253A0000)
         self.assertEqual(tag.tagNum, 1)
-        tag = list1.getElement('elem-4').tag
+        tag = list1.getElement('elem-4').effectiveTag
         self.assertEqual(tag.profileId, 0x12345678)
         self.assertEqual(tag.tagNum, 3)
 

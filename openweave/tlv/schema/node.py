@@ -45,6 +45,19 @@ class HasName(object):
         self.nameSourceRef = None
 
     @property
+    def effectiveName(self):
+        '''The effective name of the schema node.
+           If the node was assigned a name in the schema, this is the assigned name
+           (the same value as self.name).
+           If the node wasn't assigned a name, by default a None is returned.  However,
+           in some cases the node type may override this and return an automatically
+           generated name instead.'''
+        if self.name is not None:
+            return self.name
+        else:
+            return 'element-%d' % (self.parent.elemTypePattern.index(self) + 1)
+
+    @property
     def _summaryTitle(self):
         name = self.name if self.name is not None else '(unnamed)'
         return '%s: %s' % (type(self).__name__, name)
@@ -145,6 +158,69 @@ class HasQualifiers(object):
             yield node
         for node in self.quals:
             yield node
+
+class HasTag(object):
+    '''Mixin for SchemaNodes that can have an assigned tag'''
+    
+    def __init__(self, *args, **kwargs):
+        super(HasTag, self).__init__(*args, **kwargs)
+        self._possibleTags = None
+
+    @property
+    def tag(self):
+        '''The tag qualifier assigned to the node in its schema definition.
+           If no tag was assigned, a None is returned.'''
+        return self.getQualifier(Tag)
+    
+    @property
+    def effectiveTag(self):
+        '''The effective tag qualifier for the schema node.
+           If a tag qualifier is attached directly to the schema node, that tag is returned.
+           If the node has an underlying type which is a reference to a type definition
+           that has an associated default tag, the default tag is returned.
+           If the underlying type is a CHOICE OF with only a single possible tag, that
+           tag is returned.
+           If the underlying type is a CHOICE OF with multiple possible tags, an
+           AmbiguousTagError is raised.
+           If no tag has been specified, either directly or indirectly, a None is
+           returned.'''
+        possibleTags = self.possibleTags
+        if len(possibleTags) == 0:
+            return None
+        elif len(possibleTags) == 1:
+            return possibleTags[0]
+        else:
+            raise AmbiguousTagError()
+    
+    @property
+    def possibleTags(self):
+        '''A list of all possible tag qualifiers for the schema node.
+           If a tag qualifier is attached directly to the node, the list will consist
+           of that tag alone.
+           If the schema node has an underlying type which is a reference to a type
+           definition with an associated default tag, the list will consist of the default
+           tag.
+           If the underlying type is a CHOICE OF, the list will contain the default tags
+           associated with each of the possible choice alternates. In this case, the list
+           will additionally include a None element if one or more of the alternates does
+           not have a default tag.
+           If no tag has been specified, either directly or indirectly, an empty list is
+           returned.'''
+        if self._possibleTags is None:
+            tag = self.tag
+            underlyingType = None
+            if tag is None and isinstance(self, HasType):
+                underlyingType = self.type
+                if isinstance(underlyingType, ReferencedType):
+                    tag = self.type.effectiveTag
+                    underlyingType = self.type.targetType
+            if tag is not None:
+                self._possibleTags = [ tag ]
+            elif isinstance(underlyingType, ChoiceType):
+                self._possibleTags = underlyingType.possibleTags
+            else:
+                self._possibleTags = []
+        return self._possibleTags
 
 class HasDocumentation(object):
     '''Mixin for SchemaNodes that can have documentation'''
@@ -972,26 +1048,11 @@ class StatusCode(HasScopedName, HasQualifiers, HasDocumentation, SchemaNode):
                                 sourceRef=idQual.sourceRef)
 
 
-class TypeDef(HasScopedName, HasQualifiers, HasType, HasDocumentation, SchemaNode):
+class TypeDef(HasScopedName, HasQualifiers, HasType, HasTag, HasDocumentation, SchemaNode):
     '''Represents a type definition'''
 
     _schemaConstruct = 'type definition'
     _allowedQualifiers = (Tag)
-
-    @property
-    def defaultTag(self):
-        '''The effective default tag qualifier associated with the type definition.
-           If a tag qualifier is attached directly to the type definition that tag is returned.
-           If the underlying type is a referenced type pointing to another type definition 
-           the default tag associated with that type definition is returned.
-           Otherwise a None is returned.'''
-        tag = self.getQualifier(Tag)
-        if tag is not None:
-            return tag
-        elif isinstance(self.type, ReferencedType):
-            return self.type.defaultTag
-        else:
-            return None
 
     def _summarize(self, output, level, indent):
         super(TypeDef, self)._summarize(output, level, indent)
@@ -1103,9 +1164,9 @@ class ChoiceType(HasQualifiers, TypeNode):
            assigned tag.'''
         if self._possibleTags is None:
             tagSet = {}
-            for (altChain, name, tag) in self.allLeafAlternatesWithNamesAndTags():
-                if tag is not None:
-                    tagSet[tag.asTuple()] = tag
+            for (_, _, defaultTag) in self.allLeafAlternatesWithNamesAndTags():
+                if defaultTag is not None:
+                    tagSet[defaultTag.asTuple()] = defaultTag
                 else:
                     tagSet[None] = None
             self._possibleTags = list(tagSet.values())
@@ -1129,12 +1190,14 @@ class ChoiceType(HasQualifiers, TypeNode):
         for altChain in self.allLeafAlternateChains():
             defaultTag = None
             for alt in reversed(altChain):
-                defaultTag = alt.defaultTag
+                defaultTag = alt.tag
+                if defaultTag is None and isinstance(alt.type, ReferencedType):
+                    defaultTag = alt.type.effectiveTag
                 if defaultTag is not None:
                     break
             yield (altChain, altChain[0].name, defaultTag)
 
-    def allLeafAlternateChains(self, superiorAltChain=[]):
+    def allLeafAlternateChains(self, superiorAltChain=[], followTypeRefs=True):
         '''Enumerates all leaf ChoiceAlternate nodes of the current ChoiceType node, as well
            as those contained within nested ChoiceType nodes, along with a list of the non-leaf
            ChoiceAlternate nodes leading up to the current ChoiceType.
@@ -1148,9 +1211,9 @@ class ChoiceType(HasQualifiers, TypeNode):
             altChain.insert(0, alt)
             if alt.isLeafAlternate:
                 yield altChain
-            else:
-                for nestedAltChain in alt.targetType.allLeafAlternateChains(superiorAltChain=altChain):
-                    yield nestedAltChain
+            elif followTypeRefs or isinstance(alt.type, ChoiceType):
+                yield from alt.targetType.allLeafAlternateChains(superiorAltChain=altChain, 
+                                                                 followTypeRefs=followTypeRefs)
 
     def getAlternate(self, altName):
         return next((a for a in self.alternates if a.name == altName), None)
@@ -1197,9 +1260,24 @@ class ReferencedType(TypeNode):
         self.targetType = None
 
     @property
-    def defaultTag(self):
-        '''The effective default tag associated with the underlying type definition.'''
-        return self.targetTypeDef.defaultTag if self.targetTypeDef is not None else None
+    def effectiveTag(self):
+        '''The effective tag associated with the referenced type definition.
+           If the referenced type definition has a default tag, that tag is returned.
+           If the referenced type definition is itself another type reference,
+           the chain of type references if followed until a default tag is
+           found.
+           In the case no such tag is found, a None is returned.
+        '''
+        node = self
+        while True:
+            if node.targetTypeDef is None:
+                return None
+            tag = node.targetTypeDef.tag
+            if tag is not None:
+                return tag
+            node = node.targetTypeDef.type
+            if not isinstance(node, ReferencedType):
+                return None
 
     def _summarize(self, output, level, indent):
         super(ReferencedType, self)._summarize(output, level, indent)
@@ -1228,7 +1306,7 @@ class IntegerEnumValue(HasName, HasDocumentation, SchemaNode):
     def _summaryTitle(self):
         return '%s: %s = %d' % (type(self).__name__, self.name, self.value)
 
-class StructureField(HasName, HasQualifiers, HasType, HasDocumentation, SchemaNode):
+class StructureField(HasName, HasQualifiers, HasType, HasTag, HasDocumentation, SchemaNode):
     '''Represents an individual field within a STRUCTURE or FIELD GROUP type.'''
 
     _schemaConstruct = 'STRUCTURE or FIELD GROUP field'
@@ -1236,58 +1314,6 @@ class StructureField(HasName, HasQualifiers, HasType, HasDocumentation, SchemaNo
 
     def __init__(self, sourceRef=None):
         super(StructureField, self).__init__(sourceRef)
-        self._possibleTags = None
-        
-    @property
-    def tag(self):
-        '''The effective tag qualifier for the field.
-           If no tag has been defined, either directly or indirectly, None is returned.
-           If a tag qualifier is attached directly to the field, that tag is returned.
-           If the underlying type is a type definition with an associated default tag,
-           the default tag is returned.
-           If the underlying type is a CHOICE OF with multiple default tags, an
-           AmbiguousTagError is raised.'''
-        possibleTags = self.possibleTags
-        if len(possibleTags) == 0:
-            return None
-        elif len(possibleTags) == 1:
-            return possibleTags[0]
-        else:
-            raise AmbiguousTagError()
-
-    @property
-    def assignedTag(self):
-        '''The tag qualifier assigned specifically to the field, or None if no tag
-           has been assigned.'''
-        return self.getQualifier(Tag)
-
-    @property
-    def possibleTags(self):
-        '''A list of all possible tag qualifiers for the field.
-           If a tag qualifier is attached directly to the field, the list will contain
-           of that tag alone.
-           If the underlying type is a reference to a type definition with an associated
-           default tag, the list will consist of the default tag.
-           If the underlying type is a CHOICE OF, the list will contain the tags
-           associated with each of the possible choice alternates.  This list will
-           include a None element if one or more of the alternates does not have a
-           default tag.
-           If no tag has been specified, either directly or indirectly, an empty list is
-           returned.'''
-        if self._possibleTags is None:
-            tag = self.assignedTag
-            if tag is None:
-                type = self.type
-                if isinstance(type, ReferencedType):
-                    tag = type.defaultTag
-                    type = self.type.targetType
-            if tag is not None:
-                self._possibleTags = [ tag ]
-            elif isinstance(type, ChoiceType):
-                self._possibleTags = type.possibleTags
-            else:
-                self._possibleTags = []
-        return self._possibleTags
 
     def validate(self, errs):
         super(StructureField, self).validate(errs)
@@ -1322,7 +1348,7 @@ class StructureIncludes(SchemaNode):
     def _summaryTitle(self):
         return '%s: %s' % (type(self).__name__, self.targetName)
     
-class ChoiceAlternate(HasName, HasQualifiers, HasType, HasDocumentation, SchemaNode):
+class ChoiceAlternate(HasName, HasQualifiers, HasType, HasTag, HasDocumentation, SchemaNode):
     '''Represents a type alternate within a CHOICE type.'''
 
     _schemaConstruct = 'CHOICE alternate'
@@ -1337,19 +1363,16 @@ class ChoiceAlternate(HasName, HasQualifiers, HasType, HasDocumentation, SchemaN
         return not isinstance(self.targetType, ChoiceType)
 
     @property
-    def defaultTag(self):
-        '''The effective default tag qualifier associated with the choice alternate.
-           If a tag qualifier is attached directly to the choice alternate that tag is returned.
-           If the underlying type of the alternate is a referenced type pointing to a type definition 
-           the default tag associated with the type definition (if any) is returned.
-           Otherwise a None is returned.'''
-        tag = self.getQualifier(Tag)
-        if tag is not None:
-            return tag
-        elif isinstance(self.type, ReferencedType):
-            return self.type.defaultTag
+    def effectiveName(self):
+        '''The effective name of the alternate.
+           If the alternate was assigned a name in the schema, this is the assigned name.
+           If the alternate was not assigned a name, this is the string 'alternate-n', where 
+           n is the numeric position of the alternate within the enclosing ChoiceType,
+           starting with 1.'''
+        if self.name is not None:
+            return self.name
         else:
-            return None
+            return 'alternate-%d' % (self.parent.alternates.index(self) + 1)
 
     def validate(self, errs):
         super(ChoiceAlternate, self).validate(errs)
@@ -1361,7 +1384,7 @@ class ChoiceAlternate(HasName, HasQualifiers, HasType, HasDocumentation, SchemaN
         output.write('%stype:\n' % (level*indent))
         self.type._summarize(output, level+1, indent)
 
-class LinearTypePatternElement(HasName, HasQualifiers, HasType, HasDocumentation, SchemaNode):
+class LinearTypePatternElement(HasName, HasQualifiers, HasType, HasTag, HasDocumentation, SchemaNode):
     '''Represents a single type element within a linear type pattern.'''
 
     _schemaConstruct = 'linear type pattern element'
@@ -1372,52 +1395,18 @@ class LinearTypePatternElement(HasName, HasQualifiers, HasType, HasDocumentation
         super(LinearTypePatternElement, self).__init__(sourceRef)
         self.lowerBound = None
         self.upperBound = None
-        self._possibleTags = None
 
     @property
-    def tag(self):
-        '''The effective tag qualifier for the element.
-           If no tag has been defined, either directly or indirectly, None is returned.
-           If a tag qualifier is attached directly to the element, that tag is returned.
-           If the underlying type is a type definition with an associated default tag,
-           the default tag is returned.
-           If the underlying type is a CHOICE OF with multiple default tags, an
-           AmbiguousTagError is raised.'''
-        possibleTags = self.possibleTags
-        if len(possibleTags) == 0:
-            return None
-        elif len(possibleTags) == 1:
-            return possibleTags[0]
+    def effectiveName(self):
+        '''The effective name of the element.
+           If the element was assigned a name in the schema, this is the assigned name.
+           If the element was not assigned a name, this is the string 'element-n', where 
+           n is the numeric position of the element within the enclosing ArrayType/ListType,
+           starting at 1.'''
+        if self.name is not None:
+            return self.name
         else:
-            raise AmbiguousTagError()
-
-    @property
-    def possibleTags(self):
-        '''A list of all possible tag qualifiers for the element.
-           If a tag qualifier is attached directly to the element, the list will contain
-           of that tag alone.
-           If the underlying type is a reference to a type definition with an associated
-           default tag, the list will consist of the default tag.
-           If the underlying type is a CHOICE OF, the list will contain the tags
-           associated with each of the possible choice alternates.  This list will
-           include a None element if one or more of the alternates does not have a
-           default tag.
-           If no tag has been specified, either directly or indirectly, an empty list is
-           returned.'''
-        if self._possibleTags is None:
-            tag = self.getQualifier(Tag)
-            if tag is None:
-                type = self.type
-                if isinstance(type, ReferencedType):
-                    tag = type.defaultTag
-                    type = self.type.targetType
-            if tag is not None:
-                self._possibleTags = [ tag ]
-            elif isinstance(type, ChoiceType):
-                self._possibleTags = type.possibleTags
-            else:
-                self._possibleTags = []
-        return self._possibleTags
+            return 'element-%d' % (self.parent.elemTypePattern.index(self) + 1)
 
     @property
     def _allowedQualifiers(self):
