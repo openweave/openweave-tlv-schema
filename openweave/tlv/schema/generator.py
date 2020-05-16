@@ -60,7 +60,7 @@ class CodeGenBase(object):
         else:
             return True
 
-    def _translateName(self, schemaName, configContext=None, prefix='', capitalize=True):
+    def _translateName(self, schemaName, configContext=None, prefix=''):
         nameTranslations = self.config.getValue('name-translations', context=configContext)
         if nameTranslations is not None:
             for (match, sub) in nameTranslations.items():
@@ -71,12 +71,15 @@ class CodeGenBase(object):
         if len(words) > 1 and len(words[0]) == 0:
             prefix = prefix + '_'
             words = words[1:]
+        capitalizeNames = self.config.getValue('capitalize-names', context=configContext)
+        capitalizeWords = self.config.getValue('capitalize-words', context=configContext)
         for i in range(len(words)):
             newWord = self._translateNameWord(words[i], configContext=configContext)
-            if i > 0 or capitalize:
+            if (i == 0 and capitalizeNames) or (i > 0 and capitalizeWords):
                 newWord = self._capitalize(newWord)
             words[i] = newWord
-        return prefix + ''.join(words)
+        wordSep = self.config.getValue('word-separator', context=configContext)
+        return prefix + wordSep.join(words)
 
     def _translateNameWord(self, word, configContext=None):
         wordTranslations = self.config.getValue('word-translations', context=configContext)
@@ -97,7 +100,7 @@ class CodeGenBase(object):
             nsNames = nsName.split('.')
             for i in range(len(nsNames)):
                 leadingNSName = '.'.join(nsNames[:i])
-                nsNames[i] = self._translateName(nsNames[i], configContext=leadingNSName, capitalize=True)
+                nsNames[i] = self._translateName(nsNames[i], configContext=leadingNSName)
             nsPrefix = self.config.getValue('namespace-prefix')
             if nsPrefix:
                 nsNames.insert(0, nsPrefix)
@@ -200,8 +203,9 @@ class Config(object):
             if context is None:
                 context = ''
             while True:
-                if context in self.configSets:
-                    yield self.configSets[context]
+                for key, configSet in self.configSets.items():
+                    if key == context or (key.endswith('.*') and context.startswith(key[:-1])):
+                        yield configSet
                 if context == '':
                     break
                 if '.' in context:
@@ -600,6 +604,12 @@ class DefinitionsHeaderGenerator(CodeGenBase):
 
     _defaultConfig = {
         'name-split-pattern' : r'''[_-]+''',
+        
+        'capitalize-names' : True,
+        
+        'capitalize-words' : True,
+        
+        'word-separator' : '',
     
         'indent' : '    ',
         
